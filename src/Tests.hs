@@ -1,10 +1,10 @@
 module Tests where
 
-import Tests.Types
+import Tests.RankN (rankNTests)
 
 import Test.Framework
 
 main :: IO ()
 main  = defaultMain
-  [ testGroup "types" typeTests
+  [ rankNTests
   ]

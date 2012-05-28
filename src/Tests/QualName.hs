@@ -23,8 +23,8 @@ symbol :: Gen Name
 symbol  = listOf1 (elements "-><|!@#$%^&*")
 
 -- | Add a name-space to a name, qualifying it.
-namespace :: Gen Name -> Gen QualName
-namespace name = qualName <$> resize 4 (listOf conident) <*> name
+namespace :: (Namespace -> Name -> QualName) -> Gen Name -> Gen QualName
+namespace k name = k <$> resize 4 (listOf conident) <*> name
 
 upper :: Gen Char
 upper  = choose ('A','Z')
@@ -46,8 +46,8 @@ body  = listOf $ oneof
 instance Arbitrary QualName where
   arbitrary = oneof
     [ simpleName <$> name
-    , primName   <$> name
-    , namespace name
+    , namespace primName name
+    , namespace qualName name
     ]
     where
     name = oneof [conident,ident]

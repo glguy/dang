@@ -51,6 +51,9 @@ toRhoType  = MonoType
 -- | Sigma types are quantified, qualified @RhoTypes@.
 type SigmaType = Forall (Qual RhoType)
 
+toSigmaType :: Type -> SigmaType
+toSigmaType  = toForall . toQual . toRhoType
+
 sigmaParams :: SigmaType -> [TParam]
 sigmaParams  = forallParams
 

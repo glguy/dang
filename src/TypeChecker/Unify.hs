@@ -350,17 +350,18 @@ instSigmaType ix s = (ps,inst (map uvar ps) (forallData s))
   ps = [ tp { paramIndex = paramIndex tp + ix } | tp <- sigmaParams s ]
 
 
-prenixWeakConversion :: SigmaType -> ([TParam],Qual RhoType)
-prenixWeakConversion  = loop 0
+weakPrenixConversion :: SigmaType -> ([TParam],Qual RhoType)
+weakPrenixConversion  = finalize . loop 0
   where
+
+  finalize = uncurry (quantifyAux 0)
 
   loop :: Int -> SigmaType -> ([TParam],Qual RhoType)
   loop ix s = case rho of
     PolyFun l r ->
-      let (rs,r')   = loop (ix + length us) r
-          sr'       = Forall [] r'
-          (us',qr') = quantifyAux (length rs) us (Qual cxt (PolyFun l sr'))
-       in (rs ++ us', qr')
+      let (rs,r') = loop (ix + length us) r
+          sr'     = Forall [] r'
+       in (rs ++ us, Qual cxt (PolyFun l sr'))
     MonoType ty  -> quantifyAux 0 us qr
     where
     (us,qr@(Qual cxt rho)) = instSigmaType ix s

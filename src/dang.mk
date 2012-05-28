@@ -1,4 +1,8 @@
 
+GHCFLAGS   := -Wall -isrc -hidir src -odir src
+ALEXFLAGS  := -g
+HAPPYFLAGS := -g -i
+
 dang_sources := \
 	src/CodeGen.hs \
 	src/Colors.hs \
@@ -46,16 +50,6 @@ dang_sources := \
 	src/Utils.hs \
 	src/Variables.hs
 
--include src/.depend
-
-GHCFLAGS   := -Wall -isrc -hidir src -odir src
-ALEXFLAGS  := -g
-HAPPYFLAGS := -g -i
-
-src/.depend: SOURCES := $(dang_sources)
-src/.depend: $(dang_sources)
-	$(call cmd,hs_depend)
-
 dang_objects    := $(dang_sources:.hs=.o)
 dang_interfaces := $(dang_sources:.hs=.hi)
 
@@ -77,3 +71,52 @@ clean::
 mrproper::
 	$Q$(RM) src/Syntax/Parser.hs src/Syntax/Lexer.hs
 	$Q$(RM) src/.depend
+
+
+# Testing ######################################################################
+
+test_sources := \
+	src/Core/AST.hs \
+	src/Dang/Monad.hs \
+	src/ModuleSystem/Export.hs \
+	src/Pretty.hs \
+	src/QualName.hs \
+	src/Syntax/AST.hs \
+	src/Tests.hs \
+	src/Tests/QualName.hs \
+	src/Tests/RankN.hs \
+	src/Tests/Types.hs \
+	src/Tests/Utils.hs \
+	src/TypeChecker/Types.hs \
+	src/TypeChecker/Unify.hs \
+	src/Utils.hs \
+	src/Variables.hs
+
+test_objects    := $(test_sources:.hs=.o)
+test_interfaces := 
+
+test_packages := $(addprefix -package ,\
+	test-framework test-framework-hunit test-framework-quickcheck2 \
+	HUnit QuickCheck)
+
+build/bin/dang-tests: GHCFLAGS   += -main-is Tests -hide-all-packages $(dang_packages) $(test_packages)
+build/bin/dang-tests: LDFLAGS    := -Wall -hide-all-packages $(dang_packages) $(test_packages)
+build/bin/dang-tests: OBJECTS    := $(test_objects)
+build/bin/dang-tests: $(test_objects) | build/bin
+	$(call cmd,link_hs)
+
+test:: build/bin/dang-tests
+	$Qbuild/bin/dang-tests
+
+clean::
+	$Q$(RM) $(test_objects)
+
+
+# Dependency Tracking ##########################################################
+
+-include src/.depend
+
+src/.depend: SOURCES := $(dang_sources) $(test_sources)
+src/.depend: $(dang_sources) $(test_sources)
+	$(call cmd,hs_depend)
+

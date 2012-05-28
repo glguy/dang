@@ -1,23 +1,21 @@
-module Test.Types where
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+module Tests.Types where
 
-import Tests.QualName
+import QualName (qualName)
+import Tests.QualName (namespace,symbol,ident)
 import Tests.Utils (reduce)
-
-import Pretty
 import TypeChecker.Types
 import TypeChecker.Unify
 
 import Control.Applicative (pure,(<$>),(<*>))
-import Test.Framework
-import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
 import qualified Data.Set as Set
 
 
 instance Arbitrary Type where
   arbitrary = frequency
-    [ (1, TApp   <$> arbitrary        <*> arbitrary)
-    , (2, TInfix <$> namespace symbol <*> arbitrary <*> arbitrary)
+    [ (1, TApp   <$> arbitrary                 <*> arbitrary)
+    , (2, TInfix <$> namespace qualName symbol <*> arbitrary <*> arbitrary)
     , (4, TCon   <$> arbitrary)
     , (4, TVar   <$> arbitrary)
     ]
@@ -44,4 +42,4 @@ arbitraryScheme  = do
   ty <- arbitrary :: Gen Type
   let vars = Set.toList (typeVars ty)
   keep <- reduce vars
-  return (quantify keep ty)
+  return (quantify keep (toQual ty))
