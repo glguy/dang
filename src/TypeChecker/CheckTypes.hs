@@ -324,6 +324,7 @@ tcPat env p = case p of
           }
     return (penv,var,PVar n var)
 
+{-
 tcTerm :: TypeAssumps -> Syn.Term -> TC (Type,Term)
 tcTerm env tm = case tm of
 
@@ -389,6 +390,7 @@ tcTerm env tm = case tm of
     return (ty, appT body (map uvar ps))
 
   Syn.Lit lit -> tcLit lit
+  -}
 
 tcLit :: Syn.Literal -> TC (Type,Term)
 tcLit l = case l of
@@ -404,3 +406,21 @@ assumpVars  = typeVars . assumps
 -- | Variables that can be generalized.
 genVars :: Types t => TypeAssumps -> t -> Set.Set TParam
 genVars env t = typeVars t Set.\\ assumpVars env
+
+
+
+-- Bi-directional Type-checking ------------------------------------------------
+
+-- | Perform type inference, unifying against a fresh variable.
+tcInfTerm :: TypeAssumps -> Syn.Term -> TC (Term,RhoType)
+tcInfTerm env tm = do
+  ty  <- freshVar kstar
+  let rho = toRhoType ty
+  tm' <- tcTerm env tm rho
+  ty' <- applySubst rho
+  return (tm',ty')
+
+-- | Type-check a syntax term against a RhoType, producing a core term.
+tcTerm :: TypeAssumps -> Syn.Term -> RhoType -> TC Term
+tcTerm env tm ty = case tm of
+  _ -> undefined

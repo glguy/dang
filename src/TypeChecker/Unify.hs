@@ -72,6 +72,8 @@ s1 @@ s2 = Subst
 apply :: Types a => Subst -> a -> a
 apply  = apply' 0
 
+freeTypeVars :: Types a => Forall a -> Set.Set TParam
+freeTypeVars q = typeVars (forallData q) Set.\\ Set.fromList (forallParams q)
 
 class Types a where
   apply'   :: Int -> Subst -> a -> a
@@ -87,6 +89,19 @@ instance (Ord a, Types a) => Types (Set.Set a) where
   apply' b u = Set.map (apply' b u)
   typeVars   = Set.unions . Set.toList . Set.map typeVars
   genVars    = Set.unions . Set.toList . Set.map genVars
+
+instance Types RhoType where
+  apply' b u rho = case rho of
+    MonoType ty -> MonoType (apply' b u ty)
+    PolyFun l r -> PolyFun (apply' b u l) (apply' b u r)
+
+  typeVars rho = case rho of
+    MonoType ty -> typeVars ty
+    PolyFun l r -> typeVars l `Set.union` typeVars r
+
+  genVars rho = case rho of
+    MonoType ty -> genVars ty
+    PolyFun l r -> genVars l `Set.union` genVars r
 
 instance Types Type where
   apply' b u ty = case ty of
@@ -325,3 +340,27 @@ quantifyAux off ps t = (ps',apply u t)
   mkGen ix v = (paramIndex v, v { paramIndex = ix })
   (_,ps')    = unzip subst
   u          = unboundSubst (map (second gvar) subst)
+
+
+-- Subsumption -----------------------------------------------------------------
+
+instSigmaType :: Int -> SigmaType -> ([TParam],Qual RhoType)
+instSigmaType ix s = (ps,inst (map uvar ps) (forallData s))
+  where
+  ps = [ tp { paramIndex = paramIndex tp + ix } | tp <- sigmaParams s ]
+
+
+prenixWeakConversion :: SigmaType -> ([TParam],Qual RhoType)
+prenixWeakConversion  = loop 0
+  where
+
+  loop :: Int -> SigmaType -> ([TParam],Qual RhoType)
+  loop ix s = case rho of
+    PolyFun l r ->
+      let (rs,r')   = loop (ix + length us) r
+          sr'       = Forall [] r'
+          (us',qr') = quantifyAux (length rs) us (Qual cxt (PolyFun l sr'))
+       in (rs ++ us', qr')
+    MonoType ty  -> quantifyAux 0 us qr
+    where
+    (us,qr@(Qual cxt rho)) = instSigmaType ix s

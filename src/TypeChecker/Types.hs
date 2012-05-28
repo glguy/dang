@@ -34,6 +34,33 @@ getIndex :: Get Index
 getIndex  = fromEnum <$> getWord32be
 
 
+-- Rho-types -------------------------------------------------------------------
+
+-- | Rho-types are either a mono-type, or a function of poly types.
+data RhoType
+  = MonoType Type
+  | PolyFun SigmaType SigmaType
+    deriving (Eq,Show,Ord,Data,Typeable)
+
+toRhoType :: Type -> RhoType
+toRhoType  = MonoType
+
+
+-- Sigma-types -----------------------------------------------------------------
+
+-- | Sigma types are quantified, qualified @RhoTypes@.
+type SigmaType = Forall (Qual RhoType)
+
+sigmaParams :: SigmaType -> [TParam]
+sigmaParams  = forallParams
+
+sigmaData :: SigmaType -> RhoType
+sigmaData  = qualData . forallData
+
+sigmaCxt :: SigmaType -> Context
+sigmaCxt  = qualCxt . forallData
+
+
 -- Types -----------------------------------------------------------------------
 
 data Type
@@ -50,12 +77,14 @@ instance Lift Type where
     TCon qn       -> [| TCon   $(lift qn)                     |]
     TVar tv       -> [| TVar   $(lift tv)                     |]
 
+-- | Binary serialization for a @Type@.
 putType :: Putter Type
 putType (TApp l r)     = putWord8 0 >> putType l     >> putType r
 putType (TInfix n l r) = putWord8 1 >> putQualName n >> putType l >> putType r
 putType (TCon n)       = putWord8 2 >> putQualName n
 putType (TVar p)       = putWord8 3 >> putTVar p
 
+-- | Binary parsing for a @Type@.
 getType :: Get Type
 getType  = getWord8 >>= \ tag ->
   case tag of
@@ -64,10 +93,6 @@ getType  = getWord8 >>= \ tag ->
     2 -> TCon   <$> getQualName
     3 -> TVar   <$> getTVar
     _ -> fail ("Invalid Type tag: " ++ show tag)
-
-isTVar :: Type -> Bool
-isTVar TVar{} = True
-isTVar _      = False
 
 instance Pretty Type where
   pp _ (TCon n)       = ppr n
@@ -101,6 +126,10 @@ infixr 9 `tarrow`
 
 arrowConstr :: QualName
 arrowConstr  = primName ["Prelude"] "->"
+
+isTVar :: Type -> Bool
+isTVar TVar{} = True
+isTVar _      = False
 
 destInfix :: Type -> Maybe (QualName,Type,Type)
 destInfix (TInfix qn l r) = return (qn,l,r)

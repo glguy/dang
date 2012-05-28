@@ -24,4 +24,3 @@ schemeQQ  = QuasiQuoter
   , quoteType = fail "schemeQQ.quoteType"
   , quoteDec  = fail "schemeQQ.quoteDec"
   }
-
