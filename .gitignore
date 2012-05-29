@@ -3,7 +3,7 @@
 *.swp
 *.a
 .depend
-.depend.bak
+.depend.*
 *.info
 dang
 *.di

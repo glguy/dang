@@ -3,6 +3,7 @@ GHCFLAGS   := -Wall -isrc -hidir src -odir src
 ALEXFLAGS  := -g
 HAPPYFLAGS := -g -i
 
+
 dang_sources := \
 	src/CodeGen.hs \
 	src/Colors.hs \
@@ -63,6 +64,12 @@ build/bin/dang: OBJECTS    := $(dang_objects)
 build/bin/dang: $(dang_objects) | build/bin
 	$(call cmd,link_hs)
 
+-include src/.depend.dang
+
+src/.depend.dang: SOURCES := $(dang_sources)
+src/.depend.dang: $(dang_sources)
+	$(call cmd,hs_depend)
+
 all: build/bin/dang
 
 clean::
@@ -70,7 +77,7 @@ clean::
 
 mrproper::
 	$Q$(RM) src/Syntax/Parser.hs src/Syntax/Lexer.hs
-	$Q$(RM) src/.depend
+	$Q$(RM) src/.depend.dang
 
 
 # Testing ######################################################################
@@ -99,11 +106,20 @@ test_packages := $(addprefix -package ,\
 	test-framework test-framework-hunit test-framework-quickcheck2 \
 	HUnit QuickCheck)
 
-build/bin/dang-tests: GHCFLAGS   += -main-is Tests -hide-all-packages $(dang_packages) $(test_packages)
+build/bin/dang-tests: GHCFLAGS   += -main-is Tests -hide-all-packages \
+                                    $(dang_packages) $(test_packages) \
+                                    -fno-warn-missing-signatures \
+				    -fno-warn-orphans
 build/bin/dang-tests: LDFLAGS    := -Wall -hide-all-packages $(dang_packages) $(test_packages)
 build/bin/dang-tests: OBJECTS    := $(test_objects)
 build/bin/dang-tests: $(test_objects) | build/bin
 	$(call cmd,link_hs)
+
+-include src/.depend.dang-tests
+
+src/.depend.dang-tests: SOURCES := $(test_sources)
+src/.depend.dang-tests: $(test_sources)
+	$(call cmd,hs_depend)
 
 test:: build/bin/dang-tests
 	$Qbuild/bin/dang-tests
@@ -111,12 +127,5 @@ test:: build/bin/dang-tests
 clean::
 	$Q$(RM) $(test_objects)
 
-
-# Dependency Tracking ##########################################################
-
--include src/.depend
-
-src/.depend: SOURCES := $(dang_sources) $(test_sources)
-src/.depend: $(dang_sources) $(test_sources)
-	$(call cmd,hs_depend)
-
+mrproper::
+	$Q$(RM) src/.depend.dang-tests
