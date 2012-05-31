@@ -46,6 +46,7 @@ dang_sources := \
 	src/TypeChecker/Env.hs \
 	src/TypeChecker/Monad.hs \
 	src/TypeChecker/Quote.hs \
+	src/TypeChecker/Subsumption.hs \
 	src/TypeChecker/Types.hs \
 	src/TypeChecker/Unify.hs \
 	src/Utils.hs \
