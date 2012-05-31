@@ -94,6 +94,7 @@ test_sources := \
 	src/Tests/RankN.hs \
 	src/Tests/Types.hs \
 	src/Tests/Utils.hs \
+	src/TypeChecker/Subsumption.hs \
 	src/TypeChecker/Types.hs \
 	src/TypeChecker/Unify.hs \
 	src/Utils.hs \

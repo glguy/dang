@@ -90,35 +90,25 @@ instance (Ord a, Types a) => Types (Set.Set a) where
   typeVars   = Set.unions . Set.toList . Set.map typeVars
   genVars    = Set.unions . Set.toList . Set.map genVars
 
-instance Types RhoType where
-  apply' b u rho = case rho of
-    MonoType ty -> MonoType (apply' b u ty)
-    PolyFun l r -> PolyFun (apply' b u l) (apply' b u r)
-
-  typeVars rho = case rho of
-    MonoType ty -> typeVars ty
-    PolyFun l r -> typeVars l `Set.union` typeVars r
-
-  genVars rho = case rho of
-    MonoType ty -> genVars ty
-    PolyFun l r -> genVars l `Set.union` genVars r
-
 instance Types Type where
   apply' b u ty = case ty of
     TApp f x     -> TApp (apply' b u f) (apply' b u x)
     TInfix n l r -> TInfix n (apply' b u l) (apply' b u r)
+    TScheme s    -> TScheme (apply' b u s)
     TVar p       -> apply'TVar b u p
     TCon{}       -> ty
 
   typeVars ty = case ty of
     TApp f x     -> typeVars f `Set.union` typeVars x
     TInfix _ l r -> typeVars l `Set.union` typeVars r
+    TScheme s    -> typeVars s
     TVar tv      -> typeVarsTVar tv
     TCon{}       -> Set.empty
 
   genVars ty = case ty of
     TApp f x     -> genVars f `Set.union` genVars x
     TInfix _ l r -> genVars l `Set.union` genVars r
+    TScheme s    -> genVars s
     TVar tv      -> genVarsTVar tv
     TCon{}       -> Set.empty
 
@@ -340,28 +330,3 @@ quantifyAux off ps t = (ps',apply u t)
   mkGen ix v = (paramIndex v, v { paramIndex = ix })
   (_,ps')    = unzip subst
   u          = unboundSubst (map (second gvar) subst)
-
-
--- Subsumption -----------------------------------------------------------------
-
-instSigmaType :: Int -> SigmaType -> ([TParam],Qual RhoType)
-instSigmaType ix s = (ps,inst (map uvar ps) (forallData s))
-  where
-  ps = [ tp { paramIndex = paramIndex tp + ix } | tp <- sigmaParams s ]
-
-
-weakPrenixConversion :: SigmaType -> ([TParam],Qual RhoType)
-weakPrenixConversion  = finalize . loop 0
-  where
-
-  finalize = uncurry (quantifyAux 0)
-
-  loop :: Int -> SigmaType -> ([TParam],Qual RhoType)
-  loop ix s = case rho of
-    PolyFun l r ->
-      let (rs,r') = loop (ix + length us) r
-          sr'     = Forall [] r'
-       in (rs ++ us, Qual cxt (PolyFun l sr'))
-    MonoType ty  -> quantifyAux 0 us qr
-    where
-    (us,qr@(Qual cxt rho)) = instSigmaType ix s
