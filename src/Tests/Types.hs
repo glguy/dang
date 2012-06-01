@@ -23,17 +23,17 @@ instance Arbitrary TParam where
           <*> ident
           <*> arbitraryKind
 
--- | Generation of sigma types, parameterized on what sort of thing to generate
--- underneath.
-sigmaType :: Gen Type -> Gen SigmaType
-sigmaType  = fmap mkSigmaType . arbitraryForall
-  where
-  mkSigmaType = TScheme . fmap toQual
+-- | Generation of type schemes.
+scheme :: Gen Scheme
+scheme  = arbitraryForall (toQual <$> polyFun)
 
-tauType :: Gen Type
-tauType  = frequency
-  [ (1, TApp   <$> tauType                   <*> tauType)
-  , (2, TInfix <$> namespace qualName symbol <*> tauType <*> tauType)
+polyFun :: Gen PolyFun
+polyFun  = PolyFun <$> listOf1 scheme  <*> monoType
+
+monoType :: Gen Type
+monoType  = frequency
+  [ (1, TApp   <$> monoType                  <*> monoType)
+  , (2, TInfix <$> namespace qualName symbol <*> monoType <*> monoType)
   , (4, TCon   <$> arbitrary)
   , (4, TVar   <$> arbitrary)
   ]

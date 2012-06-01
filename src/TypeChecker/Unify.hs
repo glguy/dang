@@ -94,21 +94,18 @@ instance Types Type where
   apply' b u ty = case ty of
     TApp f x     -> TApp (apply' b u f) (apply' b u x)
     TInfix n l r -> TInfix n (apply' b u l) (apply' b u r)
-    TScheme s    -> TScheme (apply' b u s)
     TVar p       -> apply'TVar b u p
     TCon{}       -> ty
 
   typeVars ty = case ty of
     TApp f x     -> typeVars f `Set.union` typeVars x
     TInfix _ l r -> typeVars l `Set.union` typeVars r
-    TScheme s    -> typeVars s
     TVar tv      -> typeVarsTVar tv
     TCon{}       -> Set.empty
 
   genVars ty = case ty of
     TApp f x     -> genVars f `Set.union` genVars x
     TInfix _ l r -> genVars l `Set.union` genVars r
-    TScheme s    -> genVars s
     TVar tv      -> genVarsTVar tv
     TCon{}       -> Set.empty
 
@@ -139,6 +136,11 @@ typeVarsTVar _        = Set.empty
 genVarsTVar :: TVar -> Set.Set TParam
 genVarsTVar (GVar p) = Set.singleton p
 genVarsTVar _        = Set.empty
+
+instance Types PolyFun where
+  apply' b u (PolyFun ps ty) = PolyFun (apply' b u ps) (apply' b u ty)
+  typeVars (PolyFun ps ty)   = typeVars ps `Set.union` typeVars ty
+  genVars (PolyFun ps ty)    = genVars  ps `Set.union` genVars  ty
 
 instance Types Decl where
   apply' b s d = d { declBody = apply' b s (declBody d) }

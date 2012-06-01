@@ -34,78 +34,71 @@ getIndex :: Get Index
 getIndex  = fromEnum <$> getWord32be
 
 
+-- Type Schemes ----------------------------------------------------------------
+
+type Scheme = Forall (Qual PolyFun)
+
+-- | Produce a type scheme that quantifies no variables.
+toScheme :: Type -> Scheme
+toScheme  = toForall . toQual . toPolyFun
+
+putScheme :: Putter Scheme
+putScheme  = putForall (putQual putPolyFun)
+
+getScheme :: Get Scheme
+getScheme  = getForall (getQual getPolyFun)
+
+
+-- Polyfunctions ---------------------------------------------------------------
+
+-- | A poly fun is a function whose arguments can be of higher rank.
+data PolyFun = PolyFun [Scheme] Type
+    deriving (Eq,Show,Ord,Data,Typeable)
+
+instance Lift PolyFun where
+  lift (PolyFun ps ty) = [| PolyFun $(lift ps) $(lift ty) |]
+
+instance Pretty PolyFun where
+  pp p (PolyFun ps ty) = optParens (p > 0) (sep (args ++ [ppr ty]))
+    where
+    args = punctuate (ppr arrowConstr) (map (pp 1) ps)
+
+instance FreeVars PolyFun where
+  freeVars (PolyFun sc ty) = freeVars sc `Set.union` freeVars ty
+
+toPolyFun :: Type -> PolyFun
+toPolyFun  = PolyFun []
+
+putPolyFun :: Putter PolyFun
+putPolyFun (PolyFun ps ty) = putListOf putScheme ps >> putType ty
+
+getPolyFun :: Get PolyFun
+getPolyFun  = PolyFun <$> getListOf getScheme <*> getType
+
+
 -- Types -----------------------------------------------------------------------
-
--- | Rho types are either a mono type, or a function of poly types.
-type RhoType = Type
-
--- | Predicate to check if a type is a rho type.
-isRhoType :: Type -> Bool
-isRhoType ty
-  | isTauType ty  = True
-  | Just (l,r) <- destArrow ty
-  , isSigmaType l
-  , isSigmaType r = True
-  | otherwise     = False
-
-rhoTauType :: TauType -> RhoType
-rhoTauType  = id
-
-rhoSigmaFun :: SigmaType -> SigmaType -> RhoType
-rhoSigmaFun  = tarrow
-
--- | Sigma types are type schemes (poly types).
-type SigmaType = Type
-
--- | Predicate to check if a type is a sigma type.
-isSigmaType :: Type -> Bool
-isSigmaType ty = case ty of
-  TScheme{} -> True
-  _         -> False
-
-sigmaTauType :: TauType -> SigmaType
-sigmaTauType  = TScheme . toScheme
-
-sigmaRhoType :: RhoType -> SigmaType
-sigmaRhoType  = TScheme . toScheme
-
--- | Tau types are mono types.
-type TauType = Type
-
--- | Predicate to check if a type is a mono type.
-isTauType :: Type -> Bool
-isTauType ty = case ty of
-  TApp  l r    -> isTauType l && isTauType r
-  TInfix _ l r -> isTauType l && isTauType r
-  TScheme _    -> False
-  TCon _       -> True
-  TVar _       -> True
-
 
 data Type
   = TApp Type Type
   | TInfix QualName Type Type
-  | TScheme Scheme
   | TCon QualName
   | TVar TVar
     deriving (Eq,Show,Ord,Data,Typeable)
 
 instance Lift Type where
   lift ty = case ty of
-    TApp f x      -> [| TApp    $(lift f)  $(lift x)           |]
-    TInfix qn l r -> [| TInfix  $(lift qn) $(lift l) $(lift r) |]
-    TScheme s     -> [| TScheme $(lift s)                      |]
-    TCon qn       -> [| TCon    $(lift qn)                     |]
-    TVar tv       -> [| TVar    $(lift tv)                     |]
+    TApp f x      -> [| TApp   $(lift f)  $(lift x)           |]
+    TInfix qn l r -> [| TInfix $(lift qn) $(lift l) $(lift r) |]
+    TCon qn       -> [| TCon   $(lift qn)                     |]
+    TVar tv       -> [| TVar   $(lift tv)                     |]
 
 -- | Binary serialization for a @Type@.
 putType :: Putter Type
 putType ty = case ty of
   TApp l r     -> putWord8 0 >> putType l     >> putType r
   TInfix n l r -> putWord8 1 >> putQualName n >> putType l >> putType r
-  TScheme s    -> putWord8 2 >> putScheme s
-  TCon n       -> putWord8 3 >> putQualName n
-  TVar p       -> putWord8 4 >> putTVar p
+  TCon n       -> putWord8 2 >> putQualName n
+  TVar p       -> putWord8 3 >> putTVar p
 
 -- | Binary parsing for a @Type@.
 getType :: Get Type
@@ -113,16 +106,14 @@ getType  = getWord8 >>= \ tag ->
   case tag of
     0 -> TApp    <$> getType     <*> getType
     1 -> TInfix  <$> getQualName <*> getType <*> getType
-    2 -> TScheme <$> getScheme
-    3 -> TCon    <$> getQualName
-    4 -> TVar    <$> getTVar
+    2 -> TCon    <$> getQualName
+    3 -> TVar    <$> getTVar
     _ -> fail ("Invalid Type tag: " ++ show tag)
 
 instance Pretty Type where
   pp p ty = case ty of
     TApp a b     -> optParens (p > 1) (ppr a <+> pp 2 b)
     TInfix c a b -> optParens (p > 0) (pp 1 a <+> ppr c <+> pp 0 b)
-    TScheme s    -> optParens (p > 0) (ppr s)
     TCon n       -> ppr n
     TVar m       -> ppr m
 
@@ -130,7 +121,6 @@ instance FreeVars Type where
   freeVars ty = case ty of
     TApp a b      -> freeVars a `Set.union` freeVars b
     TInfix qn a b -> Set.singleton qn `Set.union` freeVars (a,b)
-    TScheme s     -> freeVars s
     TCon qn       -> Set.singleton qn
     TVar p        -> freeVars p
 
@@ -353,18 +343,6 @@ setSort = TCon (primName ["Prelude"] "Set")
 
 -- Type Schemes ----------------------------------------------------------------
 
-type Scheme = Forall (Qual Type)
-
--- | Produce a type scheme that quantifies no variables.
-toScheme :: Type -> Scheme
-toScheme  = toForall . toQual
-
-putScheme :: Putter Scheme
-putScheme  = putForall (putQual putType)
-
-getScheme :: Get Scheme
-getScheme  = getForall (getQual getType)
-
 
 -- | Things with quantified variables.
 data Forall a = Forall
@@ -388,7 +366,7 @@ instance Lift a => Lift (Forall a) where
     } |]
 
 instance Pretty a => Pretty (Forall a) where
-  pp _ (Forall ps a) = vars <+> ppr a
+  pp p (Forall ps a) = optParens (p > 0 && not (null ps)) (vars <+> ppr a)
     where
     vars | null ps   = empty
          | otherwise = text "forall" <+> ppList 0 ps <> char '.'
