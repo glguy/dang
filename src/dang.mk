@@ -95,6 +95,7 @@ test_sources := \
 	src/Tests/RankN.hs \
 	src/Tests/Types.hs \
 	src/Tests/Utils.hs \
+	src/TypeChecker/Monad.hs
 	src/TypeChecker/Subsumption.hs \
 	src/TypeChecker/Types.hs \
 	src/TypeChecker/Unify.hs \
@@ -111,8 +112,9 @@ test_packages := $(addprefix -package ,\
 build/bin/dang-tests: GHCFLAGS   += -main-is Tests -hide-all-packages \
                                     $(dang_packages) $(test_packages) \
                                     -fno-warn-missing-signatures \
-				    -fno-warn-orphans
-build/bin/dang-tests: LDFLAGS    := -Wall -hide-all-packages $(dang_packages) $(test_packages)
+                                    -fno-warn-orphans
+build/bin/dang-tests: LDFLAGS    := -Wall -hide-all-packages $(dang_packages) \
+                                    $(test_packages)
 build/bin/dang-tests: OBJECTS    := $(test_objects)
 build/bin/dang-tests: $(test_objects) | build/bin
 	$(call cmd,link_hs)
