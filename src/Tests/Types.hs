@@ -1,8 +1,9 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Tests.Types where
 
+import Pretty
 import QualName (qualName)
-import Tests.QualName (namespace,symbol,ident)
+import Tests.QualName (namespace,symbol,ident,conident)
 import Tests.Utils (reduce)
 import TypeChecker.Types
 import TypeChecker.Unify
@@ -10,6 +11,8 @@ import TypeChecker.Unify
 import Control.Applicative (pure,(<$>),(<*>))
 import Test.QuickCheck
 import qualified Data.Set as Set
+
+import Debug.Trace
 
 
 -- | This instance only ever generates unbound variables.
@@ -23,31 +26,41 @@ instance Arbitrary TParam where
           <*> ident
           <*> arbitraryKind
 
--- | Generation of type schemes.
-scheme :: Gen Scheme
-scheme  = arbitraryForall (toQual <$> polyFun)
-
-polyFun :: Gen PolyFun
-polyFun  = PolyFun <$> listOf1 scheme  <*> monoType
-
-monoType :: Gen Type
-monoType  = frequency
-  [ (1, TApp   <$> monoType                  <*> monoType)
-  , (2, TInfix <$> namespace qualName symbol <*> monoType <*> monoType)
-  , (4, TCon   <$> arbitrary)
-  , (4, TVar   <$> arbitrary)
-  ]
+-- | Base and recursive cases, depending on the size parameter.
+inductive :: Gen a -> Gen a -> Gen a
+inductive base rec = sized $ \ n -> case n of
+  0 -> base
+  _ -> resize (n-1) $ frequency
+    [ (2,base)
+    , (1,rec)
+    ]
 
 arbitraryKind :: Gen Kind
-arbitraryKind  = oneof
-  [ pure kstar
-  , karrow <$> arbitraryKind <*> arbitraryKind
-  ]
+arbitraryKind  = inductive base rec
+  where
+  base = oneof [ return kstar ]
+  rec  = karrow <$> arbitraryKind <*> arbitraryKind
 
--- | Generation of quantified things.
-arbitraryForall :: Types a => Gen a -> Gen (Forall a)
-arbitraryForall gen = do
-  ty <- gen
-  let vars = Set.toList (typeVars ty)
-  keep <- reduce vars
-  return (quantify keep ty)
+monoType :: Gen Type
+monoType  = inductive base rec
+  where
+  base = oneof
+    [ TVar <$> arbitrary
+    , TCon <$> namespace qualName conident
+    ]
+  rec = frequency
+    [ (2, tarrow <$> monoType                  <*> monoType)
+    , (1, TApp   <$> monoType                  <*> monoType)
+    , (1, TInfix <$> namespace qualName symbol <*> monoType <*> monoType)
+    ]
+
+polyFun :: Gen PolyFun
+polyFun  = PolyFun <$> listOf scheme <*> monoType
+
+scheme :: Gen Scheme
+scheme  = sized $ \ n -> do
+  fun <- resize (n-1) polyFun
+  ps  <- reduce (Set.toList (typeVars fun))
+  return (quantify ps (toQual fun))
+
+test m = mapM_ (putStrLn . pretty) =<< sample' m

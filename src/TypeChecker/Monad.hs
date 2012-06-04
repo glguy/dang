@@ -26,6 +26,7 @@ module TypeChecker.Monad (
   , freshInst, freshInst', withRigidInst
   ) where
 
+import Dang.IO (logInfo)
 import Dang.Monad
 import QualName (QualName,Name,simpleName)
 import TypeChecker.Types
@@ -200,6 +201,7 @@ freshInst qa = snd `fmap` freshInst' qa
 freshInst' :: Types a => Forall a -> TC ([TParam],a)
 freshInst' (Forall ps a) = do
   ps' <- mapM freshTParam ps
+  logInfo "after fresh inst'"
   a'  <- applySubst (inst (map uvar ps') a)
   return (ps',a')
 

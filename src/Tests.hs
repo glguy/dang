@@ -1,10 +1,10 @@
 module Tests where
 
-import Tests.RankN (rankNTests)
+import Tests.Subsumption (subsumptionTests)
 
-import Test.Framework
+import Test.Framework (defaultMain)
 
 main :: IO ()
 main  = defaultMain
-  [ rankNTests
+  [ subsumptionTests
   ]

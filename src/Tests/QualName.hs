@@ -38,18 +38,4 @@ number :: Gen Char
 number  = choose ('0','9')
 
 body :: Gen Name
-body  = listOf $ oneof
-  [ lower
-  , upper
-  , number
-  , elements "_'?!"
-  ]
-
-instance Arbitrary QualName where
-  arbitrary = oneof
-    [ simpleName <$> name
-    , namespace primName name
-    , namespace qualName name
-    ]
-    where
-    name = oneof [conident,ident]
+body  = listOf lower

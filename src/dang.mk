@@ -84,7 +84,9 @@ mrproper::
 # Testing ######################################################################
 
 test_sources := \
+	src/Colors.hs \
 	src/Core/AST.hs \
+	src/Dang/IO.hs \
 	src/Dang/Monad.hs \
 	src/ModuleSystem/Export.hs \
 	src/Pretty.hs \
@@ -92,10 +94,10 @@ test_sources := \
 	src/Syntax/AST.hs \
 	src/Tests.hs \
 	src/Tests/QualName.hs \
-	src/Tests/RankN.hs \
+	src/Tests/Subsumption.hs \
 	src/Tests/Types.hs \
 	src/Tests/Utils.hs \
-	src/TypeChecker/Monad.hs
+	src/TypeChecker/Monad.hs \
 	src/TypeChecker/Subsumption.hs \
 	src/TypeChecker/Types.hs \
 	src/TypeChecker/Unify.hs \
