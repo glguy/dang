@@ -17,5 +17,6 @@ subsumptionTests  = testGroup "subsumption"
   ]
 
 prop_subsumptionRefl = monadicIO $ do
-  s <- pick monoType
+  s <- pick scheme
   run (print s)
+  run (runDangWithArgs [] (runTC (subsumes s s)))
