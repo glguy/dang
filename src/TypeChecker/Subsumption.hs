@@ -4,7 +4,6 @@
 
 module TypeChecker.Subsumption where
 
-import Dang.IO (logDebug,logInfo)
 import Dang.Monad (raiseE,Exception)
 import TypeChecker.Monad (TC,unify,withRigidInst)
 import TypeChecker.Types (Scheme,PolyFun(..),Type,Qual(..))
@@ -29,12 +28,9 @@ polyFunError a b = raiseE (PolyFunError a b)
 
 -- | Subsumption.
 subsumes :: Scheme -> Scheme -> TC ()
-subsumes s1 s2 = do
-  logInfo "before"
-  withRigidInst s1 $ \ _ p1 -> do
-   logInfo "before 2"
-   withRigidInst s2 $ \ _ p2 -> do
-    logInfo "polyfun"
+subsumes s1 s2 =
+  withRigidInst s1 $ \ _ p1 ->
+  withRigidInst s2 $ \ _ p2 ->
     subsumesPolyFun p1 p2
 
 -- | Subsumption between two functions of polymorphic arguments.

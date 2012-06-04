@@ -12,8 +12,6 @@ import Control.Applicative (pure,(<$>),(<*>))
 import Test.QuickCheck
 import qualified Data.Set as Set
 
-import Debug.Trace
-
 
 -- | This instance only ever generates unbound variables.
 instance Arbitrary TVar where
