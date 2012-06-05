@@ -110,8 +110,7 @@ test_objects    := $(test_sources:.hs=.o)
 test_interfaces := 
 
 test_packages := $(addprefix -package ,\
-	test-framework test-framework-hunit test-framework-quickcheck2 \
-	HUnit QuickCheck)
+	test-framework test-framework-quickcheck2 QuickCheck)
 
 build/bin/dang-tests: GHCFLAGS   += -main-is Tests -hide-all-packages \
                                     $(dang_packages) $(test_packages) \

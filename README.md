@@ -24,6 +24,12 @@
  - text
  - https://github.com/elliottt/llvm-pretty
 
+### Test Suite
+
+ - test-framework
+ - test-framework-quickcheck2
+ - QuickCheck (>= 2)
+
 ## Building the source
 
 Dang builds using gnu make, and as such, you can build the binary by typing:
