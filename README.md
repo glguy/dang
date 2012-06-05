@@ -39,7 +39,13 @@ $ make
 ```
 
 Once the build system finishes, you should be left with an executable called
-`dang` in the current directory.
+`dang` in the `build/bin` directory.
+
+Optionally, you can build and run the test suite by making the `test` target:
+
+```shell
+$ make test
+```
 
 # Using dang
 
