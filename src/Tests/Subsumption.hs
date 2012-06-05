@@ -1,13 +1,14 @@
 module Tests.Subsumption where
 
-import Dang.IO (logInfo)
 import Dang.Monad (runDangWithArgs)
+import Pretty (pretty)
 import Tests.Types (scheme,monoType)
 import TypeChecker.Monad (runTC)
 import TypeChecker.Subsumption (subsumes)
 
 import Test.Framework (Test,testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Test.QuickCheck (resize)
 import Test.QuickCheck.Monadic (monadicIO,pick,run)
 
 
@@ -17,6 +18,5 @@ subsumptionTests  = testGroup "subsumption"
   ]
 
 prop_subsumptionRefl = monadicIO $ do
-  s <- pick scheme
-  run (print s)
+  s <- pick (resize 4 scheme)
   run (runDangWithArgs [] (runTC (subsumes s s)))

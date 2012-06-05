@@ -286,7 +286,18 @@ mgu skolems = loop
       sr <- loop (apply sl r) (apply sl y)
       return (sl @@ sr)
 
-    (TVar (UVar p), r) -> varBind skolems p r
+    (TVar (UVar p), r) -> case r of
+
+      -- special case for unifying two variables together
+      TVar (UVar p')
+        | p  `Set.member` skolems -> varBind skolems p' a
+        | p' `Set.member` skolems -> varBind skolems p  b
+
+      -- unification as normal
+      _ -> varBind skolems p  r
+
+    -- only need to consider this case here, as the double variable case is
+    -- handled above
     (l, TVar (UVar p)) -> varBind skolems p l
 
     -- constructors

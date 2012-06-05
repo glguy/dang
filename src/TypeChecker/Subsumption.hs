@@ -4,9 +4,13 @@
 
 module TypeChecker.Subsumption where
 
+import Dang.IO
+import Pretty
+
 import Dang.Monad (raiseE,Exception)
-import TypeChecker.Monad (TC,unify,withRigidInst)
+import TypeChecker.Monad (TC,unify,withRigidInst,freshInst)
 import TypeChecker.Types (Scheme,PolyFun(..),Type,Qual(..))
+import TypeChecker.Unify (typeVars)
 
 import Data.Typeable (Typeable)
 
@@ -29,34 +33,44 @@ polyFunError a b = raiseE (PolyFunError a b)
 -- | Subsumption.
 subsumes :: Scheme -> Scheme -> TC ()
 subsumes s1 s2 =
-  withRigidInst s1 $ \ _ p1 ->
-  withRigidInst s2 $ \ _ p2 ->
-    subsumesPolyFun p1 p2
+  withRigidInst s2 $ \ _ p2 -> do
+    subsumesPolyFun s1 p2
 
 -- | Subsumption between two functions of polymorphic arguments.
 --
--- XXX need to make sure that the contexts are compatible here.
-subsumesPolyFun :: Qual PolyFun -> Qual PolyFun -> TC ()
-subsumesPolyFun qp1 qp2
-  | length ps1 /= length ps2 = polyFunError qp1 qp2
-  | otherwise                = loop ps1 ps2
-  where
-  PolyFun ps1 ty1 = qualData qp1
-  PolyFun ps2 ty2 = qualData qp2
+subsumesPolyFun :: Scheme -> Qual PolyFun -> TC ()
+subsumesPolyFun s1 qp2 = do
 
-  loop ls rs = case (ls,rs) of
+  qp1 <- freshInst s1
 
-    -- poly function
-    (p1:ls',p2:rs') -> do
-      subsumes p2 p1 -- note the order
-      loop ls' rs'
+  logInfo (show qp1)
+  logInfo (show qp2)
 
-    -- mono type
-    ([],[]) -> subsumesType ty1 ty2
+  -- XXX need to make sure that the contexts are compatible here.
+  let PolyFun ps1 ty1 = qualData qp1
+      PolyFun ps2 ty2 = qualData qp2
 
-    -- error, guarded by the use of `unless` above
-    _ -> fail "subsumesPolyFun"
+      loop ls rs = case (ls,rs) of
+
+        -- poly function
+        (p1:ls',p2:rs') -> do
+          subsumes p2 p1 -- note the order
+          loop ls' rs'
+
+        -- mono type
+        ([],[]) -> subsumesType ty1 ty2
+
+        -- error, guarded by the use of `unless` above
+        _ -> fail "subsumesPolyFun"
+
+  if length ps1 /= length ps2
+     then polyFunError qp1 qp2
+     else loop ps1 ps2
+
 
 -- | Subsumption between two mono-types.
 subsumesType :: Type -> Type -> TC ()
-subsumesType ty1 ty2 = unify ty1 ty2
+subsumesType ty1 ty2 = do
+  logInfo (pretty (ty1,ty2))
+  logDebug (show (ty1,ty2))
+  unify ty1 ty2
