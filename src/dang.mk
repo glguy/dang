@@ -93,9 +93,11 @@ test_sources := \
 	src/QualName.hs \
 	src/Syntax/AST.hs \
 	src/Tests.hs \
+	src/Tests/Monadic.hs \
 	src/Tests/QualName.hs \
 	src/Tests/Subsumption.hs \
 	src/Tests/Types.hs \
+	src/Tests/Unification.hs \
 	src/Tests/Utils.hs \
 	src/TypeChecker/Monad.hs \
 	src/TypeChecker/Subsumption.hs \

@@ -34,8 +34,5 @@ upper  = choose ('A','Z')
 lower :: Gen Char
 lower  = choose ('a','z')
 
-number :: Gen Char
-number  = choose ('0','9')
-
 body :: Gen Name
 body  = listOf lower

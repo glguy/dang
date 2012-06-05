@@ -1,8 +1,7 @@
 module Tests.Subsumption where
 
 import Dang.Monad (runDangWithArgs)
-import Pretty (pretty)
-import Tests.Types (scheme,monoType)
+import Tests.Types (scheme)
 import TypeChecker.Monad (runTC)
 import TypeChecker.Subsumption (subsumes)
 

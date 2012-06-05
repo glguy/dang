@@ -4,13 +4,9 @@
 
 module TypeChecker.Subsumption where
 
-import Dang.IO
-import Pretty
-
 import Dang.Monad (raiseE,Exception)
 import TypeChecker.Monad (TC,unify,withRigidInst,freshInst)
-import TypeChecker.Types (Scheme,PolyFun(..),Type,Qual(..))
-import TypeChecker.Unify (typeVars)
+import TypeChecker.Types (Scheme,PolyFun(..),Qual(..))
 
 import Data.Typeable (Typeable)
 
@@ -43,9 +39,6 @@ subsumesPolyFun s1 qp2 = do
 
   qp1 <- freshInst s1
 
-  logInfo (show qp1)
-  logInfo (show qp2)
-
   -- XXX need to make sure that the contexts are compatible here.
   let PolyFun ps1 ty1 = qualData qp1
       PolyFun ps2 ty2 = qualData qp2
@@ -58,7 +51,7 @@ subsumesPolyFun s1 qp2 = do
           loop ls' rs'
 
         -- mono type
-        ([],[]) -> subsumesType ty1 ty2
+        ([],[]) -> unify ty1 ty2
 
         -- error, guarded by the use of `unless` above
         _ -> fail "subsumesPolyFun"
@@ -66,11 +59,3 @@ subsumesPolyFun s1 qp2 = do
   if length ps1 /= length ps2
      then polyFunError qp1 qp2
      else loop ps1 ps2
-
-
--- | Subsumption between two mono-types.
-subsumesType :: Type -> Type -> TC ()
-subsumesType ty1 ty2 = do
-  logInfo (pretty (ty1,ty2))
-  logDebug (show (ty1,ty2))
-  unify ty1 ty2
