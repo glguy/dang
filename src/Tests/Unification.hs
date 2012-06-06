@@ -22,16 +22,14 @@ unificationTests  = testGroup "unification"
   , testProperty "unify-refl"        prop_unifyRefl
   ]
 
--- | A skolem should not unify with anything but a unification variable, or
--- itself.
+-- | A skolem should unify with itself.
 prop_unifySkolemRefl = monadicIO $ do
   tparam <- pick arbitrary
   let var     = uvar tparam
       skolems = Set.singleton tparam
   run $ runDangWithArgs [] $ runTC $ withSkolems skolems $ unify var var
 
--- | A skolem should not unify with anything but a unification variable, or
--- itself.
+-- | A skolem should not unify with anything but itself.
 prop_unifySkolemFail = monadicIO $ do
   tparam <- pick arbitrary
   name   <- pick (namespace qualName conident)
@@ -40,6 +38,7 @@ prop_unifySkolemFail = monadicIO $ do
       skolems = Set.singleton tparam
   run $ assertFailure [] $ runTC $ withSkolems skolems $ unify var con
 
+-- | Unification should be reflexive.
 prop_unifyRefl = monadicIO $ do
   ty <- pick monoType
   run $ runDangWithArgs [] $ runTC $ unify ty ty
