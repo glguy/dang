@@ -4,7 +4,7 @@ import Dang.Monad (runDangWithArgs)
 import QualName (qualName)
 import Tests.Monadic (assertFailure)
 import Tests.QualName (namespace,conident)
-import Tests.Types ()
+import Tests.Types (monoType)
 import TypeChecker.Types (uvar,Type(TCon))
 import TypeChecker.Monad (runTC,unify,withSkolems)
 
@@ -19,6 +19,7 @@ unificationTests :: Test
 unificationTests  = testGroup "unification"
   [ testProperty "unify-skolem-refl" prop_unifySkolemRefl
   , testProperty "unify-skolem-fail" prop_unifySkolemFail
+  , testProperty "unify-refl"        prop_unifyRefl
   ]
 
 -- | A skolem should not unify with anything but a unification variable, or
@@ -38,3 +39,7 @@ prop_unifySkolemFail = monadicIO $ do
       con     = TCon name
       skolems = Set.singleton tparam
   run $ assertFailure [] $ runTC $ withSkolems skolems $ unify var con
+
+prop_unifyRefl = monadicIO $ do
+  ty <- pick monoType
+  run $ runDangWithArgs [] $ runTC $ unify ty ty
