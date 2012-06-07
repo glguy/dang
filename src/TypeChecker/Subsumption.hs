@@ -28,12 +28,9 @@ polyFunError a b = raiseE (PolyFunError a b)
 
 -- | Subsumption.
 subsumes :: Scheme -> Scheme -> TC ()
-subsumes s1 s2 =
-  withRigidInst s2 $ \ _ p2 -> do
-    subsumesPolyFun s1 p2
+subsumes s1 s2 = withRigidInst s2 (\ _ p2 -> subsumesPolyFun s1 p2)
 
 -- | Subsumption between two functions of polymorphic arguments.
---
 subsumesPolyFun :: Scheme -> Qual PolyFun -> TC ()
 subsumesPolyFun s1 qp2 = do
 
