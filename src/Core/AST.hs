@@ -12,7 +12,7 @@ import Pretty
 import QualName (QualName,Name,simpleName)
 import Syntax.AST (Literal(..),PrimType(..),PrimTerm(..))
 import Traversal (Data,Typeable)
-import TypeChecker.Types (Type,Forall(..),forallData,tarrow)
+import TypeChecker.Types (Scheme,Type,Forall(..),forallData)
 import Variables (FreeVars(freeVars),DefinesQualName(definedQualName))
 
 import Data.List (nub)
@@ -54,6 +54,7 @@ ppTyApp ts = brackets (commas (map ppr ts))
 data Decl = Decl
   { declName   :: QualName
   , declExport :: Export
+  , declType   :: Scheme
   , declBody   :: Forall Match
   } deriving (Show,Data,Typeable)
 
@@ -87,12 +88,6 @@ hasArgs  = not . isMTerm . forallData . declBody
 -- | Determine if a declaration is monomorphic.
 isMono :: Decl -> Bool
 isMono  = null . forallParams . declBody
-
--- | Compute the type of a declaration.
-declType :: Decl -> Forall Type
-declType d = Forall ps (matchType m)
-  where
-  Forall ps m = declBody d
 
 
 -- Variable Introduction -------------------------------------------------------
@@ -133,15 +128,6 @@ instance Pretty Match where
 
     MFail _ -> empty
 
--- | The type of a match.
-matchType :: Match -> Type
-matchType m = case m of
-  MTerm _ ty      -> ty
-  MSplit l _      -> matchType l
-  MPat p m'       -> patType p `tarrow` matchType m'
-  MGuard _ _ _ m' -> matchType m'
-  MFail ty        -> ty
-
 -- | Pretty-print the arguments with precedence 1, and the body with precedence
 -- 0.
 ppMatch :: Match -> ([Doc],Doc)
@@ -181,12 +167,6 @@ data Pat
   | PCon QualName [Pat] Type
   | PWildcard Type
     deriving (Show,Data,Typeable)
-
-patType :: Pat -> Type
-patType p = case p of
-  PVar _ ty    -> ty
-  PCon _ _ ty  -> ty
-  PWildcard ty -> ty
 
 patVars :: Pat -> [Name]
 patVars p = case p of

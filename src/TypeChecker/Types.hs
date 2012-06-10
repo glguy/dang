@@ -145,6 +145,9 @@ infixr 9 `tarrow`
 arrowConstr :: QualName
 arrowConstr  = primName ["Prelude"] "->"
 
+intConstr :: QualName
+intConstr  = primName ["Prelude"] "Int"
+
 isTVar :: Type -> Bool
 isTVar TVar{} = True
 isTVar _      = False

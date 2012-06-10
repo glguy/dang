@@ -14,7 +14,8 @@ import Dang.IO
 import Dang.Monad
 import Pretty (pretty)
 import QualName (QualName,Name,simpleName,qualSymbol)
-import TypeChecker.Types (Type,TParam,uvar,Forall(..),modifyTParamIndex)
+import TypeChecker.Types
+    (Type,TParam,uvar,Forall(..),Qual(..),PolyFun(..),modifyTParamIndex)
 import TypeChecker.Unify (inst,quantify,typeVars)
 import Variables (freeLocals,freeVars)
 
@@ -329,10 +330,10 @@ escapeSet args peers d = do
     }
 
 -- | Return the type of a declaration, if it is monomorphic and contains no
--- arguments.
+-- arguments.  As any dictionary arguments will have been turned into function
+-- parameters, the context doesn't need to be checked.
 simpleType :: Decl -> Maybe Type
 simpleType d = do
-  guard (not (hasArgs d))
-  let Forall ps ty = declType d
-  guard (null ps)
+  let Forall ps (Qual _ (PolyFun rs ty)) = declType d
+  guard (not (hasArgs d) && null ps && null rs)
   return ty

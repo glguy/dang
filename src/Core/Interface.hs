@@ -35,7 +35,7 @@ declSymbol :: QualName -> Decl -> Symbol
 declSymbol qn d = Symbol
   { symExternal = mangle qn
   , symInternal = mangle qn
-  , symType     = toQual `fmap` declType d
+  , symType     = declType d
   }
 
 addPrimType :: Namespace -> NameMap PrimType -> PrimType -> NameMap PrimType
