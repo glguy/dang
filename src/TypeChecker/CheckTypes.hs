@@ -14,6 +14,7 @@ import TypeChecker.Env
 import TypeChecker.Monad
 import TypeChecker.Types
 import TypeChecker.Unify (quantify,typeVars,Types)
+import TypeChecker.Subsumption (subsumes,subsumesPolyFun)
 import Variables (freeVars,sccFreeNames,sccToList)
 import qualified Syntax.AST as Syn
 
@@ -23,6 +24,15 @@ import Data.Typeable (Typeable)
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
+
+-- Utilities -------------------------------------------------------------------
+
+type Infer a b = TypeAssumps -> a -> TC (PolyFun,b)
+
+type Check a b = TypeAssumps -> a -> PolyFun -> TC b
+
+
+-- Environment Management ------------------------------------------------------
 
 type TypeAssumps = Assumps Scheme
 
@@ -60,7 +70,7 @@ typedAssumps ns ts env0 = foldM step env0 ts
 -- | Introduce the signature for a single data constructor.
 constrAssump :: Namespace -> [TParam] -> Type -> Syn.Constr -> TypeAssumps
              -> TC TypeAssumps
-constrAssump ns ps res c = assume qn (Forall ps (toQual ty))
+constrAssump ns ps res c = assume qn (Forall ps (toQual (toPolyFun ty)))
   where
   qn = qualName ns (Syn.constrName c)
   ty = foldr tarrow res (Syn.constrFields c)
@@ -124,20 +134,18 @@ tcTypedDecl ns env td = do
   logInfo ("Checking: " ++ pretty name)
 
   withRigidInst (Syn.typedType td) $ \ rigidVars (Qual _ sig) -> do
-    (ty,m) <- tcMatch env (Syn.typedBody td)
-
-    unify ty sig
-    m' <- applySubst m
+    m <- tcMatch env (Syn.typedBody td) sig
 
     env' <- applySubst env
     unless (Set.null (typeVars env' `Set.intersection` rigidVars))
       (raiseE (LessPolymorphic name))
 
-    let ps = Set.toList (genVars env m')
+    let ps = Set.toList (genVars env m)
     return Decl
       { declName   = name
       , declExport = Syn.typedExport td
-      , declBody   = quantify ps m'
+      , declBody   = quantify ps m
+      , declType   = Syn.typedType td
       }
 
 
@@ -170,13 +178,13 @@ tcUntypedDecl ns envInf u = do
   let name = qualName ns (Syn.untypedName u)
   logInfo ("Inferring: " ++ pretty name)
 
-  (ty,m) <- tcMatch envInf (Syn.untypedBody u)
+  (ty,m) <- tiMatch envInf (Syn.untypedBody u)
   a      <- typeAssump name envInf
 
   -- At this point, the environment holds a single unification variable as the
   -- type of this declaration.  Pull it out, and unify with the inferred type.
   let Forall [] (Qual _ var) = aData a
-  unify var ty
+  ty `subsumesPolyFun` var
 
   ty' <- applySubst ty
   m'  <- applySubst m
@@ -219,7 +227,7 @@ untypedAssumps ns bodies us env0 = foldM step env0 us
 data PartialDecl = PartialDecl
   { partialName   :: QualName
   , partialExport :: Export
-  , partialType   :: Type
+  , partialType   :: PolyFun
   , partialBody   :: Match
   } deriving Show
 
@@ -241,6 +249,7 @@ finalizePartialDecl env pd = (addAssump name assump env,decl)
     { declName   = name
     , declExport = partialExport pd
     , declBody   = quantify ps body
+    , declType   = error "finalizePartialDecl.declType"
     }
 
   assump = Assump
@@ -252,6 +261,13 @@ finalizePartialDecl env pd = (addAssump name assump env,decl)
 
 -- Terms -----------------------------------------------------------------------
 
+tiMatch :: Infer Syn.Match Match
+tiMatch  = undefined
+
+tcMatch :: Check Syn.Match Match
+tcMatch  = undefined
+
+{-
 tcMatch :: TypeAssumps -> Syn.Match -> TC (Type,Match)
 tcMatch env m = case m of
 
@@ -283,6 +299,16 @@ tcMatch env m = case m of
   Syn.MFail -> do
     res <- freshVar kstar
     return (res, MFail res)
+    -}
+
+
+tiPat :: Infer Syn.Pat Pat
+tiPat  = undefined
+
+tcPat :: Check Syn.Pat Pat
+tcPat  = undefined
+
+{-
 
 -- | Type-check a pattern, returning a fresh environment created by the pattern,
 -- the type of the pattern, and a pattern in the core language.
@@ -323,7 +349,46 @@ tcPat env p = case p of
           , aBody = Nothing
           }
     return (penv,var,PVar n var)
+    -}
 
+
+-- | Infer a type for the term provided.
+tiTerm :: Infer Syn.Term Term
+tiTerm env tm = case tm of
+
+  Syn.Abs m -> undefined
+
+  Syn.Case e m -> undefined
+
+  Syn.Let ts us e -> undefined
+
+  Syn.App f xs -> undefined
+
+  Syn.Local n -> undefined
+
+  Syn.Global qn -> undefined
+
+  Syn.Lit lit -> tiLit env lit
+
+-- | Check a term against the type provided.
+tcTerm :: Check Syn.Term Term
+tcTerm env tm rho = case tm of
+
+  Syn.Abs m -> undefined
+
+  Syn.Case e m -> undefined
+
+  Syn.Let ts us e -> undefined
+
+  Syn.App f xs -> undefined
+
+  Syn.Local n -> undefined
+
+  Syn.Global qn -> undefined
+
+  Syn.Lit lit -> tcLit env lit rho
+
+{-
 tcTerm :: TypeAssumps -> Syn.Term -> TC (Type,Term)
 tcTerm env tm = case tm of
 
@@ -389,10 +454,21 @@ tcTerm env tm = case tm of
     return (ty, appT body (map uvar ps))
 
   Syn.Lit lit -> tcLit lit
+  -}
 
-tcLit :: Syn.Literal -> TC (Type,Term)
-tcLit l = case l of
-  Syn.LInt{} -> return (TCon (primName ["Prelude"] "Int"), Lit l)
+-- | Type inference for literals.
+tiLit :: Infer Syn.Literal Term
+tiLit _ l = case l of
+
+  Syn.LInt{} -> return (toPolyFun (TCon intConstr), Lit l)
+
+-- | Type checking for literals.
+tcLit :: Check Syn.Literal Term
+tcLit _ l rho = case l of
+
+  Syn.LInt{} -> do
+    toPolyFun (TCon intConstr) `subsumesPolyFun` rho
+    return (Lit l)
 
 
 -- Generalization --------------------------------------------------------------

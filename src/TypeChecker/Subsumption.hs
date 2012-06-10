@@ -1,6 +1,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module TypeChecker.Subsumption where
 
@@ -14,45 +16,52 @@ import Data.Typeable (Typeable)
 -- Exceptions ------------------------------------------------------------------
 
 data SubsumptionException
-  = PolyFunError (Qual PolyFun) (Qual PolyFun)
+  = PolyFunError PolyFun PolyFun
     deriving (Show,Typeable)
 
 instance Exception SubsumptionException
 
 -- | The two polymorphic functions were syntactically not compatible.
-polyFunError :: Qual PolyFun -> Qual PolyFun -> TC a
+polyFunError :: PolyFun -> PolyFun -> TC a
 polyFunError a b = raiseE (PolyFunError a b)
 
 
 -- Subsumption -----------------------------------------------------------------
 
--- | Subsumption.
-subsumes :: Scheme -> Scheme -> TC ()
-subsumes s1 s2 = withRigidInst s2 (\ _ p2 -> subsumesPolyFun s1 p2)
+class Subsumes a where
+  subsumes :: Scheme -> a -> TC ()
+
+instance Subsumes Scheme where
+  subsumes s s' = withRigidInst s' (\ _ p -> subsumes s p)
+
+-- XXX need to make sure that the contexts are compatible at this stage.
+instance Subsumes (Qual PolyFun) where
+  subsumes s (Qual _cxt2 p2) = do
+    Qual _cxt1 p1 <- freshInst s
+    subsumesPolyFun p1 p2
+
+-- XXX not sure how to treat the context on the left at this point.
+instance Subsumes PolyFun where
+  subsumes s p2 = do
+    Qual _cxt1 p1 <- freshInst s
+    subsumesPolyFun p1 p2
 
 -- | Subsumption between two functions of polymorphic arguments.
-subsumesPolyFun :: Scheme -> Qual PolyFun -> TC ()
-subsumesPolyFun s1 qp2 = do
+subsumesPolyFun :: PolyFun -> PolyFun -> TC ()
+subsumesPolyFun r1@(PolyFun ps1 ty1) r2@(PolyFun ps2 ty2)
+  | length ps1 /= length ps2 = polyFunError r1 r2
+  | otherwise                = loop ps1 ps2
+  where
 
-  qp1 <- freshInst s1
+  loop ls rs = case (ls,rs) of
 
-  -- XXX need to make sure that the contexts are compatible here.
-  let PolyFun ps1 ty1 = qualData qp1
-      PolyFun ps2 ty2 = qualData qp2
+    -- poly function
+    (p1:ls',p2:rs') -> do
+      subsumes p2 p1 -- note the order
+      loop ls' rs'
 
-      loop ls rs = case (ls,rs) of
+    -- mono type
+    ([],[]) -> unify ty1 ty2
 
-        -- poly function
-        (p1:ls',p2:rs') -> do
-          subsumes p2 p1 -- note the order
-          loop ls' rs'
-
-        -- mono type
-        ([],[]) -> unify ty1 ty2
-
-        -- error, guarded by the use of `unless` above
-        _ -> fail "subsumesPolyFun"
-
-  if length ps1 /= length ps2
-     then polyFunError qp1 qp2
-     else loop ps1 ps2
+    -- error, guarded by the use of `unless` above
+    _ -> fail "subsumesPolyFun"
