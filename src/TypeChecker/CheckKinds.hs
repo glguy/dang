@@ -197,14 +197,14 @@ dataVars ps env0 = foldM step env0 ps
 -- it's basically a sanity check.
 kcPrimTerm :: KindAssumps -> PrimTerm -> TC PrimTerm
 kcPrimTerm env pt = do
-  qt <- kcTypeSig env (primTermType pt)
+  qt <- kcScheme env (primTermType pt)
   return pt { primTermType = qt }
 
 -- | Check the kind of the type of a declaration, then the kinds of any type
 -- usages inside the term structure.
 kcTypedDecl :: KindAssumps -> TypedDecl -> TC TypedDecl
 kcTypedDecl env d = do
-  qt <- kcTypeSig env (typedType d)
+  qt <- kcScheme env (typedType d)
   b  <- kcMatch env (typedBody d)
   return d
     { typedType = qt
@@ -218,20 +218,14 @@ kcUntypedDecl env d = do
   b <- kcMatch env (untypedBody d)
   return d { untypedBody = b }
 
--- | Introduce kind variables for all type variables, and kind check a type
--- signature.
-kcTypeSig :: KindAssumps -> Scheme -> TC Scheme
-kcTypeSig env qt = introType env qt $ \ env' ps qt' -> do
+-- | Introduce kind variables for all type variables, and kind check a scheme.
+kcScheme :: KindAssumps -> Scheme -> TC Scheme
+kcScheme env qt = introType env qt $ \ env' ps qf -> do
   logInfo ("Checking Type: " ++ pretty qt)
+  quantify (map fixKind ps) `fmap` kcQual env' kcPolyFun qf
 
-  let ty = qualData qt'
-  (tyk,ty') <- inferKind env' ty
-  unify kstar tyk
-
-  let cxt = qualCxt qt'
-  cxt' <- kcContext env' cxt
-
-  return (quantify (map fixKind ps) (Qual cxt' ty'))
+kcQual :: KindAssumps -> (KindAssumps -> a -> TC b) -> Qual a -> TC (Qual b)
+kcQual env k qa = Qual <$> kcContext env (qualCxt qa) <*> k env (qualData qa)
 
 kcContext :: KindAssumps -> Context -> TC Context
 kcContext env cxt = Set.fromList `fmap` mapM (kcConstraint env) (Set.toList cxt)
@@ -241,6 +235,13 @@ kcConstraint env c = do
   (ck,c') <- inferKind env c
   unify kcxt ck
   return c'
+
+kcPolyFun :: KindAssumps -> PolyFun -> TC PolyFun
+kcPolyFun env (PolyFun ps m) = do
+  ps'      <- mapM (kcScheme env) ps
+  (mty,m') <- inferKind env m
+  unify kstar mty
+  return (PolyFun ps' m')
 
 -- | Check the kind structure of any types that show up in terms.
 kcTerm :: KindAssumps -> Term -> TC Term
@@ -320,7 +321,7 @@ inferKindTVar env tv = case tv of
 -- continuation, an environment that contains those variables, and a type with
 -- them instantiated.
 introType :: KindAssumps -> Scheme
-          -> (KindAssumps -> [TParam] -> Qual Type -> TC b)
+          -> (KindAssumps -> [TParam] -> Qual PolyFun -> TC b)
           -> TC b
 introType env (Forall ps qt) k = withVarIndex (length ps) $ do
   ps'  <- mapM freshTParam ps

@@ -15,6 +15,7 @@ module Dang.IO (
   , whenVerbosity
   , logInfo, logStage
   , logDebug
+  , logWarn
   , logError
   ) where
 
@@ -116,12 +117,16 @@ logError :: BaseM m Dang => String -> m ()
 logError  = whenVerbosity 0
           . logString (withGraphics [fg red, bold]) "ERROR"
 
+logWarn :: BaseM m Dang => String -> m ()
+logWarn  = whenVerbosity 1
+         . logString (withGraphics [fg red, bold]) "WARN"
+
 logInfo :: BaseM m Dang => String -> m ()
-logInfo  = whenVerbosity 1
+logInfo  = whenVerbosity 2
          . logString (withGraphics [fg cyan, bold]) "INFO"
 
 logDebug :: BaseM m Dang => String -> m ()
-logDebug  = whenVerbosity 2
+logDebug  = whenVerbosity 3
           . logString (withGraphics [fg blue, bold]) "DEBUG"
 
 logStage :: BaseM m Dang => String -> m ()
