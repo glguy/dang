@@ -3,8 +3,7 @@
 
 ## Required build tools
 
- - alex-2.3.5
-   * This is necessary, as 3.x introduces a strange way of supporting UTF-8
+ - alex
  - happy
 
 ## Required libraries
