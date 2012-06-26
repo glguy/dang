@@ -25,7 +25,7 @@ import QualName (QualName,isSimpleName,qualModule)
 import Syntax.AST
     (Module(..),Open(..),PrimType(..),PrimTerm(..),TypedDecl(..),UntypedDecl(..)
     ,DataDecl(..),ConstrGroup(..),Constr(..),Match(..),Pat(..),Term(..))
-import TypeChecker.Types (Forall(..),Qual(..),Type(..))
+import TypeChecker.Types (Forall(..),Qual(..),PolyFun(..),Type(..))
 
 import Control.Monad (guard)
 import Data.List (foldl')
@@ -107,6 +107,9 @@ instance UsesModules a => UsesModules (Forall a) where
 
 instance UsesModules a => UsesModules (Qual a) where
   getUses (Qual cxt a) = getUses cxt `Set.union` getUses a
+
+instance UsesModules PolyFun where
+  getUses (PolyFun ps ty) = getUses ps `Set.union` getUses ty
 
 -- | Module uses from a type arise from the name-space used on a constructor.
 instance UsesModules Type where

@@ -148,11 +148,19 @@ mkUntyped d = mempty { parsedPDecls = singleton (untypedName d) (DeclTerm d) }
 mkTypeDecl :: Name -> Scheme -> PDecls
 mkTypeDecl n t = mempty { parsedPDecls = singleton n (DeclType t) }
 
+-- | Generate a TParam that is expected to be renumbered.
+mkTParam :: Name -> TParam
+mkTParam n = TParam 0 True n setSort
+
 -- | Quantify all free variables in a parsed type.
-mkScheme :: Context -> Type -> Scheme
-mkScheme cxt ty = quantify (Set.toList (typeVars ty')) (Qual cxt ty')
+mkScheme :: Qual PolyFun -> Scheme
+mkScheme q = mkScheme' (Set.toList (typeVars q)) q
+
+-- | Quantify specific variables in a parsed type.
+mkScheme' :: [TParam] -> Qual PolyFun -> Scheme
+mkScheme' ps q = quantify ps' q'
   where
-  ty' = renumber ty
+  (ps',q') = renumber (ps,q)
 
 mkConstrGroup :: [Type] -> [Constr] -> Forall ConstrGroup
 mkConstrGroup args cs = quantify vars ConstrGroup

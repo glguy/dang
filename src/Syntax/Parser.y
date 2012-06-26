@@ -55,6 +55,7 @@ import MonadLib
   'data'      { Lexeme $$ (TReserved "data")      }
   'case'      { Lexeme $$ (TReserved "case")      }
   'of'        { Lexeme $$ (TReserved "of")        }
+  'forall'    { Lexeme $$ (TReserved "forall")    }
 
 -- identifiers
   CONIDENT { Lexeme _ (TConIdent $$)  }
@@ -69,7 +70,7 @@ import MonadLib
 %name parseModule top_module
 %name parseTerm   exp
 %name parseType   type
-%name parseScheme qual_type
+%name parseScheme scheme
 
 %tokentype { Lexeme }
 
@@ -118,8 +119,8 @@ primitive :: { PDecls }
   : 'primitive' primitive_body { $2 }
 
 primitive_body :: { PDecls }
-  : 'type' tycon '::' kind      { mkPrimType (PrimType $2 $4) }
-  | IDENT        '::' qual_type { mkPrimTerm (PrimTerm $1 $3) }
+  : 'type' tycon '::' kind   { mkPrimType (PrimType $2 $4) }
+  | IDENT        '::' scheme { mkPrimTerm (PrimTerm $1 $3) }
 
 
 -- Function Declarations -------------------------------------------------------
@@ -147,7 +148,7 @@ top_fun_bind :: { UntypedDecl }
   |           fun_bind { $1 { untypedExport = Public } }
 
 type_bind :: { PDecls }
-  : IDENT '::' qual_type { mkTypeDecl $1 $3 }
+  : IDENT '::' scheme { mkTypeDecl $1 $3 }
 
 fun_bind :: { UntypedDecl }
   : IDENT arg_list '=' exp { UntypedDecl Private $1 ($2 (MTerm $4)) }
@@ -282,6 +283,26 @@ complex_pat :: { Pat }
 
 -- Types -----------------------------------------------------------------------
 
+
+-- XXX fix the type parameters
+scheme :: { Scheme }
+  : polyFun { mkScheme (Qual emptyCxt $1) }
+
+polyFun :: { PolyFun }
+  : polyArgs '->' type { PolyFun (reverse $1) $3 }
+  | type               { PolyFun []           $1 }
+
+polyArgs :: { [Scheme] }
+  : polyArgs '->' polyArg { $3 : $1 }
+  | polyArg               { [$1] }
+
+polyArg :: { Scheme }
+  : '(' 'forall' typeVars '.' polyFun ')' { mkScheme' $3 (Qual emptyCxt $5) }
+
+typeVars :: { [TParam] }
+  : typeVars IDENT { mkTParam $2 : $1 }
+  | IDENT          { [mkTParam $1] }
+
 type :: { Type }
   : apptype type_tail { $2 (foldr1 (flip tapp) $1) }
 
@@ -294,17 +315,13 @@ apptype :: { [Type] }
   | atype         { [$1] }
 
 atype :: { Type }
-  : IDENT        { uvar (TParam 0 True $1 setSort) }
+  : IDENT        { uvar (mkTParam $1) }
   | CONIDENT     { TCon (simpleName $1) }
   | '(' type ')' { $2 }
 
 atypes :: { [Type] }
   : atypes atype { $2 : $1 }
   | atype        { [$1] }
-
--- XXX fix the type parameters
-qual_type :: { Scheme }
-  : type { mkScheme emptyCxt $1 }
 
 tycon :: { String }
   : CONIDENT     { $1 }

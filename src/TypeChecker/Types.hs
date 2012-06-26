@@ -59,9 +59,13 @@ instance Lift PolyFun where
   lift (PolyFun ps ty) = [| PolyFun $(lift ps) $(lift ty) |]
 
 instance Pretty PolyFun where
-  pp p (PolyFun ps ty) = optParens (p > 0) (sep (args ++ [ppr ty]))
+  pp p (PolyFun ps ty) = optParens (p > 0) (sep funTy)
     where
-    args = punctuate (ppr arrowConstr) (map (pp 1) ps)
+    funTy = case ps of
+      []   -> [ppr ty]
+      f:fs ->  pp 1 f
+            : [ppr arrowConstr <+> pp 1 a | a <- fs]
+           ++ [ppr arrowConstr <+> ppr ty          ]
 
 instance FreeVars PolyFun where
   freeVars (PolyFun sc ty) = freeVars sc `Set.union` freeVars ty
