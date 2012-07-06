@@ -221,7 +221,7 @@ kcUntypedDecl env d = do
 -- | Introduce kind variables for all type variables, and kind check a scheme.
 kcScheme :: KindAssumps -> Scheme -> TC Scheme
 kcScheme env qt = introType env qt $ \ env' ps qf -> do
-  logInfo ("Checking Type: " ++ pretty qt)
+  logInfo ("Checking Scheme: " ++ pretty qt)
   quantify (map fixKind ps) `fmap` kcQual env' kcPolyFun qf
 
 kcQual :: KindAssumps -> (KindAssumps -> a -> TC b) -> Qual a -> TC (Qual b)
@@ -324,11 +324,11 @@ introType :: KindAssumps -> Scheme
           -> (KindAssumps -> [TParam] -> Qual PolyFun -> TC b)
           -> TC b
 introType env (Forall ps qt) k = withVarIndex (length ps) $ do
-  ps'  <- mapM freshTParam ps
-  qt'  <- freshInst (Forall ps' qt)
-  env' <- foldM (\e (q,t) -> addKindAssump e q t) env
+  ps'       <- mapM freshTParam ps
+  (uvs,qt') <- freshInst' (Forall ps' qt)
+  env'      <- foldM (\e (q,t) -> addKindAssump e q t) env
       [ (simpleName (paramName p), paramKind p) | p <- ps' ]
-  k env' ps' qt'
+  k env' uvs qt'
 
 -- | Given a type parameter, assign it a fresh kind variable.
 freshTParam :: TParam -> TC TParam
