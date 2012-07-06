@@ -16,16 +16,14 @@ kindCheckModule :: InterfaceSet -> Syn.Module -> Dang Syn.Module
 kindCheckModule iset m = do
   logStage "kind-checker"
   kcm <- runTC (kcModule iset m)
-  logInfo "Kind checking output:"
+  logInfo ("Kind checking output:\n" ++ pretty kcm)
   logDebug (show kcm)
-  logInfo (pretty kcm)
   return kcm
 
 typeCheckModule :: InterfaceSet -> Syn.Module -> Dang Core.Module
 typeCheckModule iset m = do
   logStage "type-checker"
   tcm <- runTC (tcModule iset m)
-  logInfo "Type checking output:"
+  logInfo ("Type checking output:\n" ++ pretty tcm)
   logDebug (show tcm)
-  logInfo (pretty tcm)
   return tcm
