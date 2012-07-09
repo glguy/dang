@@ -7,15 +7,17 @@ module Core.AST (
   , PrimTerm(..)
   ) where
 
-import ModuleSystem.Export (Exported(..),Export(..))
+import Core.Types
+import ModuleSystem.Export
 import Pretty
-import QualName (QualName,Name,simpleName)
+import QualName
 import Syntax.AST (Literal(..),PrimType(..),PrimTerm(..))
-import Traversal (Data,Typeable)
-import TypeChecker.Types (Scheme,Type,Forall(..),forallData)
-import Variables (FreeVars(freeVars),DefinesQualName(definedQualName))
+import TypeChecker.Vars
+import Variables
 
+import Data.Data (Data)
 import Data.List (nub)
+import Data.Typeable (Typeable)
 import qualified Data.Set as Set
 
 
@@ -55,7 +57,7 @@ data Decl = Decl
   { declName   :: QualName
   , declExport :: Export
   , declType   :: Scheme
-  , declBody   :: Forall Match
+  , declBody   :: Forall Kind Match
   } deriving (Show,Data,Typeable)
 
 instance Exported Decl where

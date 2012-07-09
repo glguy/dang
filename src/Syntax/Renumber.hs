@@ -2,10 +2,9 @@
 
 module Syntax.Renumber where
 
-import QualName (Name)
-import Syntax.AST (ConstrGroup(..),Constr(..))
-import TypeChecker.Types
-    (PolyFun(..),Type(..),Index,TParam(..),uvar,TVar(..),Forall(..),Qual(..))
+import QualName
+import Syntax.AST
+import Syntax.Types
 
 import Control.Monad (ap)
 import MonadLib (Id,StateT,get,set,runM)

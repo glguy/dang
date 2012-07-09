@@ -8,11 +8,13 @@ import ModuleSystem.Export
     (Exported(..),Export(..),isExported,ppPublic,ppPrivate,groupByExport)
 import Pretty
 import QualName
-import Traversal (Data,Typeable)
-import TypeChecker.Types
+import Syntax.Types
+import TypeChecker.Vars
 import Variables
 
+import Data.Data (Data)
 import Data.List (partition,nub)
+import Data.Typeable (Typeable)
 import Language.Haskell.TH.Syntax (liftString,Lift(..))
 import qualified Data.Set as Set
 
@@ -200,7 +202,7 @@ data DataDecl = DataDecl
   , dataArity  :: !Int
   , dataKind   :: Kind
   , dataExport :: Export
-  , dataGroups :: [Forall ConstrGroup]
+  , dataGroups :: [Forall Kind ConstrGroup]
   } deriving (Show,Data,Typeable)
 
 instance Pretty DataDecl where

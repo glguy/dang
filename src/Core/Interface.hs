@@ -1,11 +1,10 @@
 module Core.Interface where
 
 import Core.AST
-    (Module(..),Decl(..),declType,PrimType(..),PrimTerm(..))
-import ModuleSystem.Export (isExported)
-import ModuleSystem.Interface (Interface(..),emptyInterface,Symbol(..),NameMap)
-import QualName (mangle,QualName,primName,qualNamespace,Namespace)
-import TypeChecker.Types (toQual)
+import Core.Types
+import ModuleSystem.Export
+import ModuleSystem.Interface
+import QualName
 
 import qualified Data.Map as Map
 

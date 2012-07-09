@@ -3,9 +3,9 @@ module Tests.Types where
 
 import Pretty
 import QualName (qualName)
+import Syntax.Types
 import Tests.QualName (namespace,symbol,ident,conident)
 import Tests.Utils (reduce)
-import TypeChecker.Types
 import TypeChecker.Unify
 
 import Control.Applicative (pure,(<$>),(<*>))

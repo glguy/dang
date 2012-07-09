@@ -1,11 +1,11 @@
 module Tests.Unification where
 
+import Core.Types (uvar,Type(TCon))
 import Dang.Monad (runDangWithArgs)
 import QualName (qualName)
 import Tests.Monadic (assertFailure)
 import Tests.QualName (namespace,conident)
 import Tests.Types (monoType)
-import TypeChecker.Types (uvar,Type(TCon))
 import TypeChecker.Monad (runTC,unify,withSkolems)
 
 import Test.Framework (Test,testGroup)

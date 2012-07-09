@@ -40,6 +40,7 @@ dang_sources := \
 	src/Syntax/ParserCore.hs \
 	src/Syntax/Quote.hs \
 	src/Syntax/Renumber.hs \
+	src/Syntax/Types.hs \
 	src/Traversal.hs \
 	src/TypeChecker.hs \
 	src/TypeChecker/CheckKinds.hs \
@@ -48,7 +49,6 @@ dang_sources := \
 	src/TypeChecker/Monad.hs \
 	src/TypeChecker/Quote.hs \
 	src/TypeChecker/Subsumption.hs \
-	src/TypeChecker/Types.hs \
 	src/TypeChecker/Unify.hs \
 	src/TypeChecker/Vars.hs \
 	src/Utils.hs \
@@ -94,6 +94,7 @@ test_sources := \
 	src/Pretty.hs \
 	src/QualName.hs \
 	src/Syntax/AST.hs \
+	src/Syntax/Types.hs \
 	src/Tests.hs \
 	src/Tests/Monadic.hs \
 	src/Tests/QualName.hs \
@@ -103,8 +104,8 @@ test_sources := \
 	src/Tests/Utils.hs \
 	src/TypeChecker/Monad.hs \
 	src/TypeChecker/Subsumption.hs \
-	src/TypeChecker/Types.hs \
 	src/TypeChecker/Unify.hs \
+	src/TypeChecker/Vars.hs \
 	src/Utils.hs \
 	src/Variables.hs
 

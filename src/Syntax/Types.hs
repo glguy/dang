@@ -4,7 +4,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE DeriveFunctor #-}
 
-module TypeChecker.Types where
+module Syntax.Types where
 
 import Pretty
 import QualName

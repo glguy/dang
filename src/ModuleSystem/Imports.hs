@@ -18,14 +18,11 @@ module ModuleSystem.Imports (
   , missingInterface
   ) where
 
-import Dang.Monad (Dang,Exception,raiseE)
+import Dang.Monad
 import ModuleSystem.Interface
-    (readInterface,InterfaceSet,emptyInterfaceSet,addInterface)
-import QualName (QualName,isSimpleName,qualModule)
+import QualName
 import Syntax.AST
-    (Module(..),Open(..),PrimType(..),PrimTerm(..),TypedDecl(..),UntypedDecl(..)
-    ,DataDecl(..),ConstrGroup(..),Constr(..),Match(..),Pat(..),Term(..))
-import TypeChecker.Types (Forall(..),Qual(..),PolyFun(..),Type(..))
+import Syntax.Types
 
 import Control.Monad (guard)
 import Data.List (foldl')

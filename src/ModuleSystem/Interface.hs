@@ -3,16 +3,14 @@
 
 module ModuleSystem.Interface where
 
-import Dang.IO (withROBinaryFile,withWOBinaryFile)
-import Dang.Monad (Dang,io)
-import ModuleSystem.Export (Export(..))
-import ModuleSystem.Types (UsedName(..))
+import Dang.IO
+import Dang.Monad
+import ModuleSystem.Export
+import ModuleSystem.Types
 import QualName
 import Syntax.AST
-    (DataDecl(..),ConstrGroup(..),Constr(..),PrimType(..),PrimTerm(..))
-import TypeChecker.Types
-    (Kind,Scheme,Forall(..),putForall,getForall,putScheme,getScheme,putType
-    ,getType,putKind,getKind)
+import Syntax.Types
+import TypeChecker.Vars
 
 import Control.Applicative (pure,(<$>),(<*>))
 import Data.Serialize
@@ -218,10 +216,10 @@ getSymbol  = Symbol <$> getName <*> getName <*> getScheme
 
 putDataDecl :: Putter DataDecl
 putDataDecl d = do
-  putName                              (dataName d)
-  put                                  (dataArity d)
-  putKind                              (dataKind d)
-  putListOf (putForall putConstrGroup) (dataGroups d)
+  putName                                      (dataName d)
+  put                                          (dataArity d)
+  putKind                                      (dataKind d)
+  putListOf (putForall putKind putConstrGroup) (dataGroups d)
 
 getDataDecl :: Get DataDecl
 getDataDecl  = DataDecl
@@ -229,7 +227,7 @@ getDataDecl  = DataDecl
        <*> get
        <*> getKind
        <*> pure Public
-       <*> getListOf (getForall getConstrGroup)
+       <*> getListOf (getForall getKind getConstrGroup)
 
 putConstrGroup :: Putter ConstrGroup
 putConstrGroup cg = do

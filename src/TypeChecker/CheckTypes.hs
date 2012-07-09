@@ -4,6 +4,7 @@
 module TypeChecker.CheckTypes where
 
 import Core.AST
+import Core.Types
 import Dang.IO
 import Dang.Monad
 import ModuleSystem.Export (Export(..))
@@ -12,11 +13,11 @@ import Pretty
 import QualName
 import TypeChecker.Env
 import TypeChecker.Monad
-import TypeChecker.Types
 import TypeChecker.Unify (quantify,typeVars,Types)
 import TypeChecker.Subsumption (subsumes,subsumesPolyFun)
 import Variables (freeVars,sccFreeNames,sccToList)
 import qualified Syntax.AST as Syn
+import qualified Syntax.Types as Syn
 
 import Control.Monad (foldM,mapAndUnzipM,unless)
 import Data.Maybe (fromMaybe)

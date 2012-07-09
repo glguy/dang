@@ -14,17 +14,12 @@ module ModuleSystem.Resolve (
   , resolveUses
   ) where
 
-import ModuleSystem.Interface (InterfaceSet,lookupInterface,ifaceNames)
-import ModuleSystem.Imports (UseSet,Use(..))
-import ModuleSystem.Types (UsedName(..),simpleUsedName,mapUsedName,usedQualName)
+import ModuleSystem.Interface
+import ModuleSystem.Imports
+import ModuleSystem.Types
 import QualName
-    (QualName,Name,Namespace,qualName,primName,simpleName,changeNamespace
-    ,qualNamespace)
 import Syntax.AST
-    (Module(..),modNamespace,PrimType(..),PrimTerm(..),UntypedDecl(..)
-    ,TypedDecl(..),DataDecl(..),ConstrGroup(..),Constr(..),Open(..)
-    ,OpenSymbol(..))
-import TypeChecker.Types (forallData)
+import Syntax.Types
 import qualified Data.ClashMap as CM
 
 import Data.List (foldl')

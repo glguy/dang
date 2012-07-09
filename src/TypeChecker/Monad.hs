@@ -26,9 +26,9 @@ module TypeChecker.Monad (
   , freshInst, freshInst', withRigidInst
   ) where
 
+import Core.Types
 import Dang.Monad
 import QualName (QualName,Name,simpleName)
-import TypeChecker.Types
 import TypeChecker.Unify
 
 import Control.Applicative (Applicative)

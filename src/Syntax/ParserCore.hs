@@ -5,14 +5,14 @@
 module Syntax.ParserCore where
 
 import Data.ClashMap as CM
-import ModuleSystem.Export (Export(..))
+import ModuleSystem.Export
 import QualName
 import Syntax.AST
-import Syntax.Layout (layout)
-import Syntax.Lexer (scan)
+import Syntax.Layout
+import Syntax.Lexer
 import Syntax.Lexeme
-import Syntax.Renumber (renumber)
-import TypeChecker.Types
+import Syntax.Renumber
+import Syntax.Types
 import TypeChecker.Unify
 
 import Control.Applicative (Applicative)

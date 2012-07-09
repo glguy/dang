@@ -10,14 +10,13 @@ module Compile.LambdaLift (
   ) where
 
 import Core.AST
+import Core.Types
 import Dang.IO
 import Dang.Monad
-import Pretty (pretty)
-import QualName (QualName,Name,simpleName,qualSymbol)
-import TypeChecker.Types
-    (Type,TParam,uvar,Forall(..),Qual(..),PolyFun(..),modifyTParamIndex)
-import TypeChecker.Unify (inst,quantify,typeVars)
-import Variables (freeLocals,freeVars)
+import Pretty
+import QualName
+import TypeChecker.Unify
+import Variables
 
 import Control.Applicative(Applicative(..),(<$>))
 import Data.Generics (extM,Data(gmapM))

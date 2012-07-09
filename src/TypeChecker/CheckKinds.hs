@@ -8,9 +8,9 @@ import ModuleSystem.Interface (HasInterface,getKinds)
 import Pretty
 import QualName
 import Syntax.AST
+import Syntax.Types
 import TypeChecker.Env
 import TypeChecker.Monad
-import TypeChecker.Types
 import TypeChecker.Unify as Types
 import Variables (sccToList,sccFreeNames)
 

@@ -6,9 +6,9 @@
 
 module TypeChecker.Subsumption where
 
+import Core.Types (Scheme,PolyFun(..),Qual(..))
 import Dang.Monad (raiseE,Exception)
 import TypeChecker.Monad (TC,unify,withRigidInst,freshInst)
-import TypeChecker.Types (Scheme,PolyFun(..),Qual(..))
 
 import Data.Typeable (Typeable)
 

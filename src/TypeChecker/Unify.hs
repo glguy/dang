@@ -5,9 +5,9 @@
 module TypeChecker.Unify where
 
 import Core.AST
+import Core.Types
 import Dang.Monad
 import Pretty
-import TypeChecker.Types
 import Syntax.AST (DataDecl(..),ConstrGroup(..),Constr(..))
 
 import Control.Arrow (second)
