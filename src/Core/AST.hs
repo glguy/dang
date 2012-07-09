@@ -94,11 +94,11 @@ isMono  = null . forallParams . declBody
 
 -- | Typed variable introduction.
 data Match
- = MTerm  Term  Type
+ = MTerm  Term  Scheme
  | MSplit Match Match
  | MPat   Pat   Match
- | MGuard Pat   Term  Type Match
- | MFail  Type
+ | MGuard Pat   Term  Scheme Match
+ | MFail  Scheme
    deriving (Show,Data,Typeable)
 
 instance FreeVars Match where

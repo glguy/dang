@@ -134,6 +134,7 @@ tcTypedDecl ns env td = do
   logInfo ("Checking: " ++ pretty name)
 
   withRigidInst (Syn.typedType td) $ \ rigidVars (Qual _ sig) -> do
+    logInfo (pretty sig)
     m <- tcMatch env (Syn.typedBody td) sig
 
     env' <- applySubst env
@@ -262,10 +263,30 @@ finalizePartialDecl env pd = (addAssump name assump env,decl)
 -- Terms -----------------------------------------------------------------------
 
 tiMatch :: Infer Syn.Match Match
-tiMatch  = undefined
+tiMatch env m = case m of
+
+  Syn.MPat p m' -> undefined
+
+  Syn.MGuard p e m' -> undefined
+
+  Syn.MSplit l r -> undefined
+
+  Syn.MTerm tm -> undefined
+
+  Syn.MFail -> undefined
 
 tcMatch :: Check Syn.Match Match
-tcMatch  = undefined
+tcMatch env m rho = case m of
+
+  Syn.MPat p m' -> undefined
+
+  Syn.MGuard p e m' -> undefined
+
+  Syn.MSplit l r -> undefined
+
+  Syn.MTerm tm -> undefined
+
+  Syn.MFail -> undefined
 
 {-
 tcMatch :: TypeAssumps -> Syn.Match -> TC (Type,Match)

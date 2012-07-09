@@ -12,6 +12,7 @@ dang_sources := \
 	src/Compile/Rename.hs \
 	src/Core/AST.hs \
 	src/Core/Interface.hs \
+	src/Core/Types.hs \
 	src/Dang/FileName.hs \
 	src/Dang/IO.hs \
 	src/Dang/Monad.hs \
@@ -49,6 +50,7 @@ dang_sources := \
 	src/TypeChecker/Subsumption.hs \
 	src/TypeChecker/Types.hs \
 	src/TypeChecker/Unify.hs \
+	src/TypeChecker/Vars.hs \
 	src/Utils.hs \
 	src/Variables.hs
 
