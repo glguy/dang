@@ -3,14 +3,15 @@
 
 module ModuleSystem.Interface where
 
+import Core.Types
 import Dang.IO
 import Dang.Monad
 import ModuleSystem.Export
 import ModuleSystem.Types
 import QualName
 import Syntax.AST
-import Syntax.Types
 import TypeChecker.Vars
+import qualified Syntax.Types as Syn
 
 import Control.Applicative (pure,(<$>),(<*>))
 import Data.Serialize

@@ -5,6 +5,7 @@ module Syntax.Renumber where
 import QualName
 import Syntax.AST
 import Syntax.Types
+import TypeChecker.Vars
 
 import Control.Monad (ap)
 import MonadLib (Id,StateT,get,set,runM)
@@ -85,7 +86,7 @@ instance HasRenumber Type where
     TVar (GVar _) -> return ty
     TVar (UVar p) -> uvar `fmap` renumberVars p
 
-instance HasRenumber TParam where
+instance HasRenumber (TParam kind) where
   renumberVars p = do
     ix <- lookupIndex (paramName p)
     return p { paramIndex = ix }
@@ -93,7 +94,7 @@ instance HasRenumber TParam where
 -- | Make the assumption that the parameters in the forall are already bound
 -- here; renumbering should only happen on types that haven't already had a
 -- forall put on them.
-instance HasRenumber a => HasRenumber (Forall a) where
+instance HasRenumber a => HasRenumber (Forall kind a) where
   renumberVars f = upd `fmap` renumberVars (forallData f)
     where
     upd a = f { forallData = a }

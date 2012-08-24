@@ -9,6 +9,7 @@ import Core.Types
 import Dang.Monad
 import Pretty
 import Syntax.AST (DataDecl(..),ConstrGroup(..),Constr(..))
+import TypeChecker.Vars
 
 import Control.Arrow (second)
 import Control.Monad (unless,guard)
@@ -93,19 +94,16 @@ instance (Ord a, Types a) => Types (Set.Set a) where
 instance Types Type where
   apply' b u ty = case ty of
     TApp f x     -> TApp (apply' b u f) (apply' b u x)
-    TInfix n l r -> TInfix n (apply' b u l) (apply' b u r)
     TVar p       -> apply'TVar b u p
     TCon{}       -> ty
 
   typeVars ty = case ty of
     TApp f x     -> typeVars f `Set.union` typeVars x
-    TInfix _ l r -> typeVars l `Set.union` typeVars r
     TVar tv      -> typeVarsTVar tv
     TCon{}       -> Set.empty
 
   genVars ty = case ty of
     TApp f x     -> genVars f `Set.union` genVars x
-    TInfix _ l r -> genVars l `Set.union` genVars r
     TVar tv      -> genVarsTVar tv
     TCon{}       -> Set.empty
 

@@ -6,6 +6,7 @@
 
 module Syntax.Types where
 
+import Core.Types (Qual(..),toQual,putQual,getQual)
 import Pretty
 import QualName
 import TypeChecker.Vars
@@ -116,15 +117,6 @@ getType  = getWord8 >>= \ tag ->
     3 -> TVar    <$> getTVar getKind
     _ -> fail ("Invalid Type tag: " ++ show tag)
 
--- | Map a function over the type variables in a type
-mapTVar :: (TVar Kind -> TVar Kind) -> Type -> Type
-mapTVar f = loop
-  where
-  loop (TApp a b)      = TApp (loop a) (loop b)
-  loop (TInfix qn a b) = TInfix qn (loop a) (loop b)
-  loop (TVar p)        = TVar (f p)
-  loop ty              = ty
-
 -- | Construct a unification variable.
 uvar :: TParam Kind -> Type
 uvar  = TVar . UVar
@@ -176,57 +168,11 @@ destTCon ty = fromMaybe [ty] $ do
   (l,r) <- destTApp ty
   return (l:destTCon r)
 
-destUVar :: Type -> Maybe (TParam Kind)
-destUVar (TVar (UVar p)) = return p
-destUVar _               = Nothing
-
 -- | Count the number of arguments to a function.
 typeArity :: Type -> Int
 typeArity ty = maybe 0 rec (destArrow ty)
   where
   rec (_,r) = 1 + typeArity r
-
-
--- Constraints -----------------------------------------------------------------
-
-type Constraint = Type
-type Context    = Set.Set Constraint
-
-getConstraint :: Get Constraint
-getConstraint  = getType
-
-putConstraint :: Putter Constraint
-putConstraint  = putType
-
-getContext :: Get Context
-getContext  = getSetOf getConstraint
-
-putContext :: Putter Context
-putContext  = putSetOf putConstraint
-
-emptyCxt :: Context
-emptyCxt  = Set.empty
-
-mergeCxt :: Context -> Context -> Context
-mergeCxt  = Set.union
-
-ppContext :: Context -> Doc
-ppContext cxt
-  | Set.null cxt = empty
-  | otherwise    = parens (cat (map ppr (Set.toList cxt)))
-
--- | Type constructor for equality constraints.
-eqConstr :: QualName
-eqConstr  = primName ["Prelude"] "~"
-
--- | An equality constraint.
-(~~) :: Type -> Type -> Constraint
-(~~)  = TInfix eqConstr
-
-destEq :: Constraint -> Maybe (Type,Type)
-destEq c = case c of
-  TInfix qn l r | qn == eqConstr -> Just (l,r)
-  _                              -> Nothing
 
 
 -- Kinds -----------------------------------------------------------------------
@@ -259,36 +205,3 @@ type Sort = Type
 
 setSort :: Sort
 setSort = TCon (primName ["Prelude"] "Set")
-
-
--- Type Schemes ----------------------------------------------------------------
-
-
-data Qual a = Qual
-  { qualCxt  :: Context
-  , qualData :: a
-  } deriving (Show,Eq,Ord,Data,Typeable,Functor)
-
-toQual :: a -> Qual a
-toQual a = Qual emptyCxt a
-
-putQual :: Putter a -> Putter (Qual a)
-putQual p (Qual cxt a) = putContext cxt >> p a
-
-getQual :: Get a -> Get (Qual a)
-getQual m = Qual <$> getContext <*> m
-
-instance Lift a => Lift (Qual a) where
-  lift q = [| Qual
-    { qualCxt  = Set.fromList $(lift (Set.toList (qualCxt q)))
-    , qualData = $(lift (qualData q))
-    } |]
-
-instance Pretty a => Pretty (Qual a) where
-  pp p (Qual cxt a) = optParens (p > 0) (cxtP <+> ppr a)
-    where
-    cxtP | Set.null cxt = empty
-         | otherwise    = ppContext cxt <+> text "=>"
-
-instance FreeVars a => FreeVars (Qual a) where
-  freeVars (Qual cxt a) = freeVars cxt `Set.union` freeVars a
