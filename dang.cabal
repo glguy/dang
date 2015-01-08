@@ -86,7 +86,8 @@ library
                         syb              >= 0.3,
                         template-haskell >= 2.7,
                         text             >= 0.11,
-                        lens             >= 4.2
+                        lens             >= 4.2,
+                        sysyb            == 0.1
 
 executable dang
   main-is:              Main.hs

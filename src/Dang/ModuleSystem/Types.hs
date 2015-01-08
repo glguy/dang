@@ -34,7 +34,7 @@ instance Pretty Export where
 data Exported a = Exported { exSpec  :: Export
                            , exValue :: a
                            } deriving (Show,Data,Typeable,Functor,Foldable
-                                      ,Traversable)
+                                      ,Traversable,Generic)
 
 instance HasLocation a => HasLocation (Exported a) where
   getLoc ex = getLoc (exValue ex)

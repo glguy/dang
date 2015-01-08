@@ -1,34 +1,37 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Dang.ModuleSystem.ScopeCheck where
 
-import Dang.ModuleSystem.Interface
 import Dang.ModuleSystem.QualName
-import Dang.ModuleSystem.Types ( Exported(..) )
+import Dang.ModuleSystem.Types ( Exported(..), Export )
 import Dang.Monad
 import Dang.Syntax.AST
 import Dang.Utils.Location
 import Dang.Utils.Panic ( panic )
 import Dang.Utils.Pretty
 
-import           Control.Applicative ( Applicative )
+import           Control.Applicative ( Applicative(..) )
 import           Control.Lens as Lens ( view, set, traverseOf )
 import           Data.Foldable ( foldMap )
-import           Data.Generics ( Data, gmapM, extM, ext1M )
 import qualified Data.Map.Strict as Map
 import           Data.Monoid ( Monoid(..) )
 import qualified Data.Set as Set
 import           Data.Traversable ( traverse )
+import           Generics.Transforms
+import           GHC.Generics (Generic, Rep)
 import           MonadLib
-                     ( BaseM(..), runM, Id, ReaderT, ask, local, StateT, get
+                     ( BaseM(..), runM, ReaderT, ask, local, StateT, get
                      , set )
 
 
 -- | Fully-qualify all names in the module, according to their imports.
 scopeCheckModule :: Module -> Dang Module
-scopeCheckModule m = failErrs (runScope (scModule m))
+scopeCheckModule m = failErrs (runScope (scPass m))
 
 scPanic :: Pretty msg => msg -> a
 scPanic  = panic "Dang.ModuleSystem.ScopeCheck"
@@ -258,29 +261,58 @@ freshenSym  = traverseOf qualSymbol $ \ sym -> Scope $
 
 -- Scope Checking --------------------------------------------------------------
 
--- | Generic traversal.
-scPass :: Data a => a -> Scope a
-scPass  = gmapM scPass
-  `ext1M` scLocated
-   `extM` scLocalDecls
-   `extM` scBind
-   `extM` scMatch
-   `extM` scExpr
-   `extM` scName
+class ScopeCheck a where
+  scPass :: a -> Scope a
+  default scPass :: (Generic a, GTransform ScopeCheck (Rep a)) => a -> Scope a
+  scPass = f
+    where
+    -- Name this and don't inline it!
+    -- This ensures that GHC spends its time eliminating
+    -- generics!
+    f = scPassGeneric
+    {-# NOINLINE f #-}
+
+instance ScopeCheck a => ScopeCheck [a]
+instance ScopeCheck a => ScopeCheck (Maybe a)
+instance ScopeCheck a => ScopeCheck (Labelled a)
+instance ScopeCheck a => ScopeCheck (Exported a)
+instance ScopeCheck TopDecl
+instance ScopeCheck Decl
+instance ScopeCheck DataDecl
+instance ScopeCheck Pat
+instance ScopeCheck Schema
+instance ScopeCheck Literal
+instance ScopeCheck Open
+instance ScopeCheck OpenSymbol
+instance ScopeCheck Type
+instance ScopeCheck Signature
+instance ScopeCheck PrimTerm
+instance ScopeCheck PrimType
+instance ScopeCheck Export
+instance ScopeCheck ConstrGroup
+instance ScopeCheck Constr
+instance ScopeCheck Int      where scPass = pure
+instance ScopeCheck Integer  where scPass = pure
+instance ScopeCheck Char     where scPass = pure
+instance ScopeCheck Bool     where scPass = pure
+
+scPassGeneric :: (Generic a, GTransform ScopeCheck (Rep a)) => a -> Scope a
+scPassGeneric x = genericTransform (Fun scPass :: Fun ScopeCheck Scope) x
+{-# INLINE scPassGeneric #-}
 
 
 -- | Rename a module.
-scModule :: Module -> Scope Module
-scModule m = withModName (unLoc (modName m)) $
-  do names <- fullNames (modNames m)
-     withNames names (scPass m)
+instance ScopeCheck Module where
+  scPass m = withModName (unLoc (modName m)) $
+    do names <- fullNames (modNames m)
+       withNames names (scPass m)
 
 
 -- | Annotate errors and warnings with the current location
-scLocated :: Data a => Located a -> Scope (Located a)
-scLocated Located { .. } = withLoc locRange $
-  do a <- scPass locValue
-     return Located { locValue = a, .. }
+instance ScopeCheck a => ScopeCheck (Located a) where
+  scPass Located { .. } = withLoc locRange $
+    do a <- scPass locValue
+       return Located { locValue = a, .. }
 
 
 -- | Value bindings.  This makes the assumption that the name of the binding has
@@ -297,20 +329,20 @@ scLocated Located { .. } = withLoc locRange $
 --
 --  In any case, the binding name is simply renamed locally, either qualifying
 --  it the public cases, or freshening it for the private cases.
-scBind :: Bind -> Scope Bind
-scBind Bind { .. } = 
-  do bindName <- scPass bindName
-     bindType <- scPass bindType
-     bindBody <- scPass bindBody
-     return Bind { .. }
+instance ScopeCheck Bind where
+  scPass Bind { .. } =
+    do bindName <- scPass bindName
+       bindType <- scPass bindType
+       bindBody <- scPass bindBody
+       return Bind { .. }
 
 
 -- | Rename a group of local declarations.  Only the local declarations are
 -- brought into scope, as the exported declarations will be already named by the
 -- enclosing naming environment.  See localNames.
-scLocalDecls :: LocalDecls -> Scope LocalDecls
-scLocalDecls LocalDecls { .. } =
-  do ns     <- getModName
+instance ScopeCheck LocalDecls where
+  scPass LocalDecls { .. } = do
+     ns     <- getModName
      lNames <- fullNames (foldMap (declNames ns) ldLocals)
      extNames lNames $
        do ldLocals <- scPass ldLocals
@@ -320,47 +352,50 @@ scLocalDecls LocalDecls { .. } =
 
 -- | Introduce the names bound by the pattern, when checking the body of the
 -- Match.
-scMatch :: Match -> Scope Match
-
-scMatch (MPat p m) =
-  do loc   <- askLoc
+instance ScopeCheck Match where
+  scPass (MPat p m) = do
+     loc   <- askLoc
      names <- fullNames (patNames loc p)
      extNames names $
        do p'    <- scPass p
-          m'    <- scMatch m
+          m'    <- scPass m
           return (MPat p' m')
 
-scMatch (MGuard p e m) =
-  do loc   <- askLoc
+  scPass (MGuard p e m) = do
+     loc   <- askLoc
      names <- fullNames (patNames loc p)
      extNames names $
        do p'    <- scPass p
           e'    <- scPass e
-          m'    <- scMatch m
+          m'    <- scPass m
           return (MGuard p' e' m')
 
-scMatch m = gmapM scPass m
+  scPass m = f m
+    where
+    f = scPassGeneric
+    {-# NOINLINE f #-}
 
 
 -- | The only interesting case for name introduction in expressions is Let, as
 -- it can define new names, as well as import other modules.
-scExpr :: Expr -> Scope Expr
-
-scExpr (Let ds e) =
-  do ns    <- getModName
+instance ScopeCheck Expr where
+  scPass (Let ds e) = do
+     ns    <- getModName
      names <- fullNames (foldMap (declNames ns) ds)
      extNames names $
        do ds' <- mapM scPass ds
           e'  <- scPass e
           return (Let ds' e')
 
-scExpr e = gmapM scPass e
-
+  scPass e = f e
+    where
+    f = scPassGeneric
+    {-# NOINLINE f #-}
 
 -- | Resolve names.
-scName :: Name -> Scope Name
-scName n =
-  do qn' <- resolveName (view qualName n)
+instance ScopeCheck Name where
+  scPass n = do
+     qn' <- resolveName (view qualName n)
      return (Lens.set qualName qn' n)
 
 
